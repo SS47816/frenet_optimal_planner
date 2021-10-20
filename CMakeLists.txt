@@ -8,11 +8,14 @@ project(frenet_optimal_planner)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  nav_msgs
   roscpp
   rospy
   std_msgs
+  nav_msgs
+  geometry_msgs
+  autoware_msgs
+  message_generation
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -49,11 +52,12 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  LaneInfo.msg
+  SpecialWaypointArray.msg
+  Waypoint.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -70,10 +74,12 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   nav_msgs#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+  nav_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -90,10 +96,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+generate_dynamic_reconfigure_options(
+  cfg/frenet_optimal_planner.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -105,10 +110,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES frenet_optimal_planner
-#  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES frenet_planner
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  DEPENDS system_lib
 )
 
 ###########
@@ -127,15 +132,45 @@ include_directories(
 #   src/${PROJECT_NAME}/frenet_optimal_planner.cpp
 # )
 
+add_library(${PROJECT_NAME}
+  include/${PROJECT_NAME}/frenet.h
+  include/${PROJECT_NAME}/frenet.cc
+  include/${PROJECT_NAME}/lane.h
+  include/${PROJECT_NAME}/lane.cc
+  include/${PROJECT_NAME}/math_utils.h
+  include/${PROJECT_NAME}/math_utils.cc
+  include/${PROJECT_NAME}/motion_model.h
+  include/${PROJECT_NAME}/motion_model.cc
+  include/${PROJECT_NAME}/polynomials.h
+  include/${PROJECT_NAME}/polynomials.cc
+  include/${PROJECT_NAME}/quartic_polynomial.h
+  include/${PROJECT_NAME}/quartic_polynomial.cc
+  include/${PROJECT_NAME}/quintic_polynomial.h
+  include/${PROJECT_NAME}/quintic_polynomial.cc
+  include/${PROJECT_NAME}/spline.h
+  include/${PROJECT_NAME}/spline.cc
+  include/${PROJECT_NAME}/vehicle_state.h
+  include/${PROJECT_NAME}/vehicle_state.cc
+  include/${PROJECT_NAME}/vehicle.h
+  include/${PROJECT_NAME}/vehicle.cc
+  include/${PROJECT_NAME}/sat_collision_checker.h
+  include/${PROJECT_NAME}/sat_collision_checker.cc
+  include/${PROJECT_NAME}/visualization.cpp
+  include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.h
+  include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.cc
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/frenet_optimal_planner_node.cpp)
+add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cpp)
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${${PROJECT_NAME}_LIBRARY} ${PROJECT_NAME})
+add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg ${PROJECT_NAME})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
