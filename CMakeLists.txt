@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(frenet_optimal_planner)
+add_compile_options(-std=c++11)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -16,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   autoware_msgs
   message_generation
   dynamic_reconfigure
+  tf
+  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -111,7 +114,7 @@ generate_dynamic_reconfigure_options(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES frenet_planner
+  LIBRARIES frenet_optimal_planner
   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
   DEPENDS system_lib
 )
@@ -123,8 +126,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake
 )
 
 ## Declare a C++ library
@@ -155,6 +159,8 @@ add_library(${PROJECT_NAME}
   include/${PROJECT_NAME}/vehicle.cc
   include/${PROJECT_NAME}/sat_collision_checker.h
   include/${PROJECT_NAME}/sat_collision_checker.cc
+  include/${PROJECT_NAME}/behaviour.h
+  include/${PROJECT_NAME}/behaviour.cc
   include/${PROJECT_NAME}/visualization.cpp
   include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.h
   include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.cc
@@ -169,8 +175,16 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cpp)
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${${PROJECT_NAME}_LIBRARY} ${PROJECT_NAME})
-add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME}_node 
+  ${catkin_LIBRARIES}
+  ${${PROJECT_NAME}_LIBRARY}
+  ${PROJECT_NAME}
+)
+add_dependencies(${PROJECT_NAME}_node 
+  ${catkin_EXPORTED_TARGETS}
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_gencfg ${PROJECT_NAME}
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
