@@ -7,7 +7,7 @@
 
 #include "quartic_polynomial.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 QuarticPolynomial::QuarticPolynomial(const std::vector<double> &start, const std::vector<double> &end, double T)
@@ -52,4 +52,4 @@ double QuarticPolynomial::calculateThirdDerivative(double t)
   return 6*coefficients[3] + 24*coefficients[4]*t;
 }
 
-} // namespace frenet_optimal_planner
+} // namespace fop

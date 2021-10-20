@@ -10,7 +10,7 @@
 
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
 class SATCollisionChecker
 {
@@ -58,7 +58,7 @@ private:
   geometry_msgs::Polygon rotate_and_translate_rect(geometry_msgs::Polygon rect, double centre_x, double centre_y, double yaw);
 
 };
-}  // namespace frenet_optimal_planner
+}  // namespace fop
 
 
 #endif  // SAT_COLLISION_CHECKER_H_

@@ -7,7 +7,7 @@
 
 #include "quintic_polynomial.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 QuinticPolynomial::QuinticPolynomial(const std::vector<double> &start, const std::vector<double> &end, double T)
@@ -54,4 +54,4 @@ double QuinticPolynomial::calculateThirdDerivative(double t)
   return 6*coefficients[3] + 24*coefficients[4]*t + 60*coefficients[5]*t*t;
 }
 
-} // namespace frenet_optimal_planner
+} // namespace fop

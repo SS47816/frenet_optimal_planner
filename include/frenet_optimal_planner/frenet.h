@@ -18,7 +18,7 @@
 #include "vehicle_state.h"
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 class FrenetState
@@ -80,7 +80,7 @@ class FrenetPath
 FrenetState getFrenet(VehicleState current_state, const Map& map);
 FrenetState getFrenet(VehicleState current_state, const Path& path);
 
-}  // end of namespace frenet_optimal_planner
+}  // end of namespace fop
 
 
 #endif  // FRENET_H_

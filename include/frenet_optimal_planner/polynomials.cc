@@ -7,7 +7,7 @@
 
 #include "polynomials.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 double polyeval(const VectorXd &coeffs, double x)
@@ -47,4 +47,4 @@ VectorXd polyfit(const VectorXd &xvals, const VectorXd &yvals, int order)
   return result;
 }
 
-} // end namespace frenet_optimal_planner
+} // end namespace fop

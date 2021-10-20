@@ -10,12 +10,12 @@
 
 #include <vector>
 
-#include <agv/LaneInfo.h>
+#include <frenet_optimal_planner/LaneInfo.h>
 
 #include "math_utils.h"
 #include "vehicle_state.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 enum class WaypointType
@@ -33,7 +33,7 @@ class Map
  public:
   // constructors
   Map(){};
-  Map(const agv::LaneInfo::ConstPtr& lane_info);
+  Map(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   // Destructor
   virtual ~Map(){};
 
@@ -79,6 +79,6 @@ int nextWaypoint(VehicleState current_state, const Map& map);
 int lastWaypoint(VehicleState current_state, const Path& path);
 int lastWaypoint(VehicleState current_state, const Map& map);
 
-}  // end of namespace frenet_optimal_planner
+}  // end of namespace fop
 
 #endif // LANE_H_

@@ -3,7 +3,7 @@
 
 #include "math_utils.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 enum LINK_TYPE
 {
@@ -30,6 +30,6 @@ public:
 private:
 };
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop
 
 #endif  // VEHICLE_H_

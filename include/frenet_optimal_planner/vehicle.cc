@@ -1,6 +1,6 @@
 #include "vehicle.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
   double Vehicle::length() { return 3.0; };
@@ -16,4 +16,4 @@ namespace frenet_optimal_planner
   double Vehicle::max_curvature() { return 0.666; };//TODO: origin 1.0  0.476 (for 30 degree), 
   double Vehicle::steering_angle_rate() { return 0.144; }; 
 
-} // namespace frenet_optimal_planner
+} // namespace fop

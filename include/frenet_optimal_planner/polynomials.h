@@ -12,7 +12,7 @@
 
 using Eigen::VectorXd;
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 // Evaluate a polynomial.
@@ -20,6 +20,6 @@ double polyeval(const VectorXd &coeffs, double x);
 // Fit a polynomial.
 VectorXd polyfit(const VectorXd &xvals, const VectorXd &yvals, int order);
 
-} // end of namespace frenet_optimal_planner
+} // end of namespace fop
 
 #endif // POLYNOMIALS_H_

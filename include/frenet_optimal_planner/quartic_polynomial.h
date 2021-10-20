@@ -11,7 +11,7 @@
 #include <vector>
 #include "Eigen/Dense"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 class QuarticPolynomial
@@ -36,6 +36,6 @@ class QuarticPolynomial
 	std::vector<double> coefficients;
 };
 
-} // namespace frenet_optimal_planner
+} // namespace fop
 
 #endif //QUARTIC_POLYNOMIAL_H_

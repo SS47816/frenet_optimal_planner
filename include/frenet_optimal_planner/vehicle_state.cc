@@ -7,7 +7,7 @@
 
 #include "vehicle_state.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 VehicleState::VehicleState(const double x, const double y, const double yaw, const double speed)
@@ -24,4 +24,4 @@ ActuatorState::ActuatorState(const double steering_angle, const double accelerat
   this->a = acceleration;
 }
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop

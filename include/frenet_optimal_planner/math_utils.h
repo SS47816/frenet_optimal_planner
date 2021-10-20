@@ -11,7 +11,7 @@
 #include <vector>
 #include <cmath>
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 // Return PI
@@ -41,6 +41,6 @@ double distance(const double x1, const double y1, const double x2, const double 
 // Return true if a is greater or equal to b
 bool cmp_doubles_greater_or_equal(const double a, const double b);
 
-} // end of namespace frenet_optimal_planner
+} // end of namespace fop
 
 #endif // MATH_UTILS_H_

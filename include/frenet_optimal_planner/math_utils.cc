@@ -7,7 +7,7 @@
 
 #include "math_utils.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 constexpr double pi() { return M_PI; }
@@ -58,4 +58,4 @@ bool cmp_doubles_greater_or_equal(const double a, const double b)
   }
 }
 
-} // end of namespace frenet_optimal_planner
+} // end of namespace fop

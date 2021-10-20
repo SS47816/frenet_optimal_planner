@@ -11,7 +11,7 @@
 
 #include <cmath>
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 
@@ -43,6 +43,6 @@ class ActuatorState
   double a;      // acceleration
 };
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop
 
 #endif  // VEHICLE_STATE_H_

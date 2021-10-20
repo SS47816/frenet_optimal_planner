@@ -16,10 +16,10 @@
 
 #include "frenet.h"
 #include "vehicle_state.h"
-#include "behaviour_planner/behaviour.h"
+#include "behaviour.h"
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
 double MARKER_DISPLAY_DURATION = 0.1;
 
@@ -392,7 +392,7 @@ class CollisionDetectorVisualization : public Visualization
 public:
   static visualization_msgs::MarkerArray visualizeCollisions(
       const std::vector<geometry_msgs::Polygon> buggy_rects, const autoware_msgs::DetectedObjectArray objects,
-      const agv::common::Path front_axle_path, const agv::common::Path rear_axle_path, VehicleState current_state,
+      const Path front_axle_path, const Path rear_axle_path, VehicleState current_state,
       double vehicle_width, double safety_margin, geometry_msgs::Polygon dynamic_bumper_straight, int slowdown_mode)
   {
     int marker_id = 0;
@@ -576,7 +576,7 @@ public:
     return label_markers;
   }
 
-  static visualization_msgs::Marker visualizePredictedTrajectory(const agv::common::Path& path, double vehicle_width,
+  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& path, double vehicle_width,
                                                                  double safety_margin, VehicleState current_state,
                                                                  int& marker_id, std::string ns, COLOR color)
   {
@@ -646,8 +646,8 @@ class BehaviourPlannerVisualization : public Visualization
 {
 public:
   static visualization_msgs::MarkerArray
-  visualizeBehaviour(std::vector<behaviour_planner::Behaviour> candidate_behaviours,
-                     behaviour_planner::Behaviour final_behaviour, VehicleState current_state)
+  visualizeBehaviour(std::vector<Behaviour> candidate_behaviours,
+                     Behaviour final_behaviour, VehicleState current_state)
   {
     int marker_id = 0;
 
@@ -670,7 +670,7 @@ public:
     return behaviour_markers;
   }
 
-  static visualization_msgs::Marker behaviourToMarker(behaviour_planner::Behaviour behaviour,
+  static visualization_msgs::Marker behaviourToMarker(Behaviour behaviour,
                                                       VehicleState current_state, int& marker_id, double& marker_height,
                                                       std::string ns, bool is_final)
   {
@@ -806,7 +806,7 @@ public:
     marker_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, 0, -2.7);
 
     visualization_msgs::Marker end_point_marker = meshToMarker(
-        "package://agv/meshes/endpoint.stl", marker_pose, marker_id, RED, "end_point", END_POINT_MARKER_SCALE, true);
+        "package://frenet_optimal_planner/meshes/endpoint.stl", marker_pose, marker_id, RED, "end_point", END_POINT_MARKER_SCALE, true);
 
     return end_point_marker;
   }
@@ -821,4 +821,4 @@ public:
     return marker_arr;
   }
 };
-}  // namespace frenet_optimal_planner
+}  // namespace fop

@@ -7,7 +7,7 @@
 
 #include "motion_model.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 // Get the next state std::vector of the bicycle vehicle kinematic model
@@ -40,4 +40,4 @@ VehicleState getNextKinematicModelState(const VehicleState &state, const Actuato
   return next_state;
 }
 
-} // end of namespace frenet_optimal_planner
+} // end of namespace fop

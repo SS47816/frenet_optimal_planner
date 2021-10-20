@@ -8,7 +8,7 @@
 
 #include "frenet.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 FrenetState getFrenet(VehicleState current_state, const Map& map)
@@ -119,13 +119,13 @@ FrenetState getFrenet(VehicleState current_state, const Path& path)
 
   // get the normal std::vector d
   const double wp_yaw = path.yaw.at(prev_wp_id);
-  const double delta_yaw = agv::common::unifyAngleRange(current_state.yaw - wp_yaw);
+  const double delta_yaw = fop::unifyAngleRange(current_state.yaw - wp_yaw);
 
   // std::cout << "getFrenet() Break 3" << std::endl;
 
   // find the yaw of std::vector x
   const double x_yaw = atan2(x_y, x_x);
-  const double yaw_x_n = agv::common::unifyAngleRange(x_yaw - wp_yaw);
+  const double yaw_x_n = fop::unifyAngleRange(x_yaw - wp_yaw);
 
   if (yaw_x_n < 0.0)
   {
@@ -152,4 +152,4 @@ FrenetState getFrenet(VehicleState current_state, const Path& path)
   return state;
 }
 
-}  // end of namespace frenet_optimal_planner
+}  // end of namespace fop

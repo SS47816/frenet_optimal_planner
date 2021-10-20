@@ -9,9 +9,7 @@
 #include "frenet_optimal_trajectory_planner.h"
 #include <ros/ros.h>
 
-namespace agv
-{
-namespace local_planner
+namespace fop
 {
 FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTrajectoryPlanner::Setting settings)
 {
@@ -19,10 +17,10 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTraj
 }
 
 FrenetOptimalTrajectoryPlanner::ResultType
-FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const agv::common::Map& map)
+FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Map& map)
 {
   FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
-  result.cubic_spline = agv::common::Spline2D(map);
+  result.cubic_spline = fop::Spline2D(map);
 
   std::vector<double> s;
   for (double i = 0; i < result.cubic_spline.s_.back(); i += 0.1)
@@ -32,7 +30,7 @@ FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const agv::common::Map& m
 
   for (int i = 0; i < s.size(); i++)
   {
-    agv::common::VehicleState state = result.cubic_spline.calculatePosition(s.at(i));
+    fop::VehicleState state = result.cubic_spline.calculatePosition(s.at(i));
     result.rx.push_back(state.x);
     result.ry.push_back(state.y);
     result.ryaw.push_back(result.cubic_spline.calculateYaw(s.at(i)));
@@ -42,13 +40,13 @@ FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const agv::common::Map& m
   return result;
 }
 
-std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(
-    agv::common::Spline2D& cubic_spline, const agv::common::FrenetState& frenet_state, double center_offset,
+std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(
+    fop::Spline2D& cubic_spline, const fop::FrenetState& frenet_state, double center_offset,
     double left_width, double right_width, const autoware_msgs::DetectedObjectArray& obstacles, double desired_speed,
     double current_speed, int path_size)
 {
   // Sample a list of FrenetPaths
-  std::vector<agv::common::FrenetPath> frenet_paths_list =
+  std::vector<fop::FrenetPath> frenet_paths_list =
       generateFrenetPaths(frenet_state, center_offset, left_width, right_width, desired_speed, current_speed);
   int num_paths_generated = frenet_paths_list.size();
   std::cout << "Total Paths Generated: " << frenet_paths_list.size() << std::endl;
@@ -69,17 +67,17 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptim
   // std::cout << "Paths Passed Collision Check: " << frenet_paths_list.size() << std::endl;
 
   // Find the path with minimum costs
-  std::vector<agv::common::FrenetPath> best_path_list = findBestPaths(frenet_paths_list);
+  std::vector<fop::FrenetPath> best_path_list = findBestPaths(frenet_paths_list);
 
   return best_path_list;
 }
 
-std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(
-    const agv::common::FrenetState& frenet_state, double center_offset, double left_bound, double right_bound,
+std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(
+    const fop::FrenetState& frenet_state, double center_offset, double left_bound, double right_bound,
     double desired_speed, double current_speed)
 {
   // list of frenet paths generated
-  std::vector<agv::common::FrenetPath> frenet_paths;
+  std::vector<fop::FrenetPath> frenet_paths;
   std::vector<double> goal_ds;
 
   // generate different goals with a lateral offset
@@ -102,7 +100,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFre
     {
       t_count++;
       // std::cout << T << std::endl;
-      agv::common::FrenetPath frenet_path = agv::common::FrenetPath();
+      fop::FrenetPath frenet_path = fop::FrenetPath();
 
       // left lane
       if (goal_d >= -left_bound)
@@ -138,7 +136,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFre
       end_d.push_back(0.0);
 
       // generate lateral quintic polynomial
-      agv::common::QuinticPolynomial lateral_quintic_poly = agv::common::QuinticPolynomial(start_d, end_d, T);
+      fop::QuinticPolynomial lateral_quintic_poly = fop::QuinticPolynomial(start_d, end_d, T);
 
       // store the this lateral trajectory into frenet_path
       for (double t = 0.0; t <= T; t += settings_.tick_t)
@@ -163,7 +161,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFre
         }
 
         // copy the longitudinal path over
-        agv::common::FrenetPath target_frenet_path = frenet_path;
+        fop::FrenetPath target_frenet_path = frenet_path;
 
         // start longitudinal state [s, s_d, s_dd]
         std::vector<double> start_s;
@@ -177,7 +175,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFre
         end_s.push_back(0.0);
 
         // generate longitudinal quartic polynomial
-        agv::common::QuarticPolynomial longitudinal_quartic_poly = agv::common::QuarticPolynomial(start_s, end_s, T);
+        fop::QuarticPolynomial longitudinal_quartic_poly = fop::QuarticPolynomial(start_s, end_s, T);
 
         // store the this longitudinal trajectory into target_frenet_path
         for (double t = 0.0; t <= T; t += settings_.tick_t)
@@ -228,8 +226,8 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFre
   return frenet_paths;
 }
 
-std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(
-    std::vector<agv::common::FrenetPath>& frenet_paths_list, agv::common::Spline2D& cubic_spline)
+std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(
+    std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline)
 {
   for (int i = 0; i < frenet_paths_list.size(); i++)
   {
@@ -238,7 +236,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGl
     for (int j = 0; j < frenet_paths_list.at(i).s.size(); j++)
     {
       // std::cout << "Break 1.1" << std::endl;
-      agv::common::VehicleState state = cubic_spline.calculatePosition(frenet_paths_list.at(i).s.at(j));
+      fop::VehicleState state = cubic_spline.calculatePosition(frenet_paths_list.at(i).s.at(j));
       // std::cout << "Break 1.2" << std::endl;
       double i_yaw = cubic_spline.calculateYaw(frenet_paths_list.at(i).s.at(j));
       // std::cout << "Break 1.3" << std::endl;
@@ -264,7 +262,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGl
     for (int j = 0; j < frenet_paths_list.at(i).yaw.size() - 1; j++)
     {
       double yaw_diff = frenet_paths_list.at(i).yaw.at(j + 1) - frenet_paths_list.at(i).yaw.at(j);
-      yaw_diff = agv::common::unifyAngleRange(yaw_diff);
+      yaw_diff = fop::unifyAngleRange(yaw_diff);
       frenet_paths_list.at(i).c.push_back(yaw_diff / frenet_paths_list.at(i).ds.at(j));
     }
   }
@@ -279,7 +277,7 @@ std::vector<agv::common::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGl
  * @param obstacles obstacles to check against for collision
  * @return false if there is a collision along the path. Otherwise, true
  */
-bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const agv::common::FrenetPath& frenet_path,
+bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& frenet_path,
                                                         const autoware_msgs::DetectedObjectArray& obstacles,
                                                         const std::string& margin)
 {
@@ -295,8 +293,8 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const agv::common::Frene
   {
     double cost = 0;
 
-    double buggy_center_x = frenet_path.x.at(i) + agv::common::Vehicle::Lf() * cos(frenet_path.yaw.at(i));
-    double buggy_center_y = frenet_path.y.at(i) + agv::common::Vehicle::Lf() * sin(frenet_path.yaw.at(i));
+    double buggy_center_x = frenet_path.x.at(i) + fop::Vehicle::Lf() * cos(frenet_path.yaw.at(i));
+    double buggy_center_y = frenet_path.y.at(i) + fop::Vehicle::Lf() * sin(frenet_path.yaw.at(i));
 
     buggy_rect = sat_collision_checker_instance.construct_rectangle(buggy_center_x, buggy_center_y,
                                                                     frenet_path.yaw.at(i), settings_.vehicle_length,
@@ -343,8 +341,8 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const agv::common::Frene
  * @param obstacles obstacles to check against for collision
  * @return vector containing the safe paths. If there are no safe paths, a dummy vector is returned.
  */
-std::vector<agv::common::FrenetPath>
-FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<agv::common::FrenetPath>& frenet_paths_list,
+std::vector<fop::FrenetPath>
+FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& frenet_paths_list,
                                            const autoware_msgs::DetectedObjectArray& obstacles, int path_size)
 {
   safest_paths.clear();
@@ -356,9 +354,9 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<agv::common::Frenet
   backup_close_proximity_paths.clear();
   backup_unsafe_paths.clear();
 
-  std::vector<agv::common::FrenetPath> passed_constraints_paths;
-  std::vector<agv::common::FrenetPath> safe_paths;
-  std::vector<agv::common::FrenetPath> backup_paths;
+  std::vector<fop::FrenetPath> passed_constraints_paths;
+  std::vector<fop::FrenetPath> safe_paths;
+  std::vector<fop::FrenetPath> backup_paths;
 
   bool using_backup_paths = false;
 
@@ -386,7 +384,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<agv::common::Frenet
 
     if (safe)
     {
-      double max_curvature_rate = settings_.steering_angle_rate / agv::common::Vehicle::Lr();
+      double max_curvature_rate = settings_.steering_angle_rate / fop::Vehicle::Lr();
       double max_curvature_change = max_curvature_rate * settings_.tick_t - 0.0005;  //! 0.0005 is margin
       //! Do curvature check only on waypoints to be put into path
       for (int j = 0; j < frenet_path.c.size(); j++)
@@ -511,7 +509,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<agv::common::Frenet
   }
   else  // No safe paths
   {
-    std::vector<agv::common::FrenetPath> dummy_paths;
+    std::vector<fop::FrenetPath> dummy_paths;
     return dummy_paths;
   }
 }
@@ -523,10 +521,10 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<agv::common::Frenet
  * @param frenet_paths_list vector of paths to sample from
  * @return vector containing the 3 best paths
  */
-std::vector<agv::common::FrenetPath>
-FrenetOptimalTrajectoryPlanner::findBestPaths(const std::vector<agv::common::FrenetPath>& frenet_paths_list)
+std::vector<fop::FrenetPath>
+FrenetOptimalTrajectoryPlanner::findBestPaths(const std::vector<fop::FrenetPath>& frenet_paths_list)
 {
-  std::vector<agv::common::FrenetPath> best_path_list;
+  std::vector<fop::FrenetPath> best_path_list;
   best_path_list.push_back(findBestPath(frenet_paths_list, 0));  // transition area
   best_path_list.push_back(findBestPath(frenet_paths_list, 1));  // left lane
 
@@ -535,8 +533,8 @@ FrenetOptimalTrajectoryPlanner::findBestPaths(const std::vector<agv::common::Fre
   return best_path_list;
 }
 
-agv::common::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(
-    const std::vector<agv::common::FrenetPath>& frenet_paths_list, int target_lane_id)
+fop::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(
+    const std::vector<fop::FrenetPath>& frenet_paths_list, int target_lane_id)
 {
   // if best paths list isn't empty
   if (!frenet_paths_list.empty())
@@ -572,9 +570,8 @@ agv::common::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(
   else
   {
     // std::cout << "Best Path Is Empty" << std::endl;
-    return agv::common::FrenetPath();
+    return fop::FrenetPath();
   }
 }
 
-}  // namespace local_planner
-}  // namespace agv
+}  // namespace fop

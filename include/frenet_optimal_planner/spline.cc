@@ -7,7 +7,7 @@
 
 #include "spline.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
 /****************************************************************************
@@ -136,7 +136,7 @@ int Spline::searchIndex(double x)
   int index = 0;
   for (int i = 0; i < x_.size(); i++)
   {
-    if (agv::common::cmp_doubles_greater_or_equal(x, x_.at(i)))
+    if (fop::cmp_doubles_greater_or_equal(x, x_.at(i)))
     {
       index = i;
     }
@@ -228,4 +228,4 @@ std::vector<double> Spline2D::calculate_s(const Map& ref_wps)
   return s;
 };
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop

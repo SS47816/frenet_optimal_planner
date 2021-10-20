@@ -7,10 +7,10 @@
 
 #include "lane.h"
 
-namespace frenet_optimal_planner
+namespace fop
 {
 
-Map::Map(const agv::LaneInfo::ConstPtr& lane_info)
+Map::Map(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
 {
   for (auto waypoint : lane_info->waypoints)
   {
@@ -124,4 +124,4 @@ int lastWaypoint(VehicleState current_state, const Map& map)
   return nextWaypoint(current_state, map) - 1;
 }
 
-}  // end of namespace frenet_optimal_planner
+}  // end of namespace fop

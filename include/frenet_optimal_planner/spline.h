@@ -16,7 +16,7 @@
 #include "math_utils.h"
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
 class Spline
 {
@@ -94,6 +94,6 @@ private:
   std::vector<double> calculate_s(const Map& ref_wps);
 };
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop
 
 #endif  // SPLINE_H_

@@ -6,7 +6,7 @@
 
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
 /**
  * @brief Get the directions of the edges of a polygon
@@ -309,4 +309,4 @@ geometry_msgs::Polygon SATCollisionChecker::remove_top_layer(geometry_msgs::Poly
   return new_polygon;
 }
 
-} //namespace frenet_optimal_planner
+} //namespace fop
