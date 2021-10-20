@@ -17,35 +17,31 @@
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 #include <std_msgs/Int16.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
-
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/TransformStamped.h>
-
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include <autoware_msgs/DetectedObjectArray.h>
-#include <agv/LaneInfo.h>
-#include <agv/SpecialWaypointArray.h>
-
-#include "frenet_optimal_planner/frenet_optimal_planner_node.h"
-
-#include "common/frenet.h"
-#include "common/vehicle.h"
-#include "common/visualization.cpp"
-#include "common/lane.h"
+#include <frenet_optimal_planner/LaneInfo.h>
+#include <frenet_optimal_planner/SpecialWaypointArray.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <agv/frenet_optimal_planner_Config.h>
+#include <frenet_optimal_planner/frenet_optimal_planner_Config.h>
+
+#include "frenet_optimal_planner/frenet.h"
+#include "frenet_optimal_planner/vehicle.h"
+#include "frenet_optimal_planner/visualization.cpp"
+#include "frenet_optimal_planner/lane.h"
+#include "frenet_optimal_planner/frenet_optimal_trajectory_planner.h"
 
 /**
  * |              |              |
@@ -65,16 +61,16 @@
  */
 
 
-namespace frenet_optimal_planner
+namespace fop
 {
-FrenetOptimalTrajectoryPlanning frenet_planner_instance;
+FrenetOptimalTrajectoryPlanner frenet_planner_instance;
 
-// FrenetOptimalTrajectoryPlanning settings
-FrenetOptimalTrajectoryPlanning::Setting SETTINGS = FrenetOptimalTrajectoryPlanning::Setting();
+// FrenetOptimalTrajectoryPlanner settings
+FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanner::Setting();
 
 // Vehicle Parameters
-const double L = agv::common::Vehicle::L();  // Wheelbase length, back wheel to front wheel
-const double MAX_STEERING_ANGLE = agv::common::Vehicle::max_steering_angle();  // Maximum steering angle
+const double L = fop::Vehicle::L();  // Wheelbase length, back wheel to front wheel
+const double MAX_STEERING_ANGLE = fop::Vehicle::max_steering_angle();  // Maximum steering angle
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                // Maximum allowable waypoint separation
 const double WP_MIN_SEP = 0.01;               // Minimum allowable waypoint separation
@@ -109,14 +105,14 @@ enum LaneID
 };
 
 // Dynamic parameter server callback function
-void dynamicParamCallback(agv::frenet_optimal_planner_Config& config, uint32_t level)
+void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
 {
   // Hyperparameters for output path
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
   // Safety constraints
-  SETTINGS.vehicle_width = agv::common::Vehicle::width();
-  SETTINGS.vehicle_length = agv::common::Vehicle::length();
+  SETTINGS.vehicle_width = fop::Vehicle::width();
+  SETTINGS.vehicle_length = fop::Vehicle::length();
   SETTINGS.soft_safety_margin = config.soft_safety_margin;
   // Stanley gains
   STANLEY_OVERALL_GAIN = config.stanley_overall_gain;
@@ -135,11 +131,11 @@ void dynamicParamCallback(agv::frenet_optimal_planner_Config& config, uint32_t l
   SETTINGS.delta_speed = config.delta_speed;
   SETTINGS.num_speed_sample = config.num_speed_sample;
   // Constraints
-  SETTINGS.max_speed = agv::common::Vehicle::max_speed();
-  SETTINGS.max_accel = agv::common::Vehicle::max_acceleration();
-  SETTINGS.max_decel = agv::common::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = agv::common::Vehicle::max_curvature();
-  SETTINGS.steering_angle_rate = agv::common::Vehicle::steering_angle_rate();
+  SETTINGS.max_speed = fop::Vehicle::max_speed();
+  SETTINGS.max_accel = fop::Vehicle::max_acceleration();
+  SETTINGS.max_decel = fop::Vehicle::max_deceleration();
+  SETTINGS.max_curvature = fop::Vehicle::max_curvature();
+  SETTINGS.steering_angle_rate = fop::Vehicle::steering_angle_rate();
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
@@ -170,18 +166,18 @@ private:
   ros::NodeHandle nh;
 
   // Vehicle's current state
-  agv::common::VehicleState current_state_;    // State of the vehicle baselink
-  agv::common::VehicleState frontaxle_state_;  // State of the vehicle frontaxle
-  agv::common::FrenetState start_state_;       // Starting States for sampling
+  fop::VehicleState current_state_;    // State of the vehicle baselink
+  fop::VehicleState frontaxle_state_;  // State of the vehicle frontaxle
+  fop::FrenetState start_state_;       // Starting States for sampling
 
   autoware_msgs::DetectedObjectArray obstacles;
-  agv::behaviour_planner::SATCollisionChecker sat_collision_checker_instance;
+  SATCollisionChecker sat_collision_checker_instance;
 
   // Maps and Paths
-  agv::common::Map map_;           // Maps (All the waypoints)
-  agv::common::Map local_map_;     // Selected Waypoints
-  agv::common::Path ref_spline_;   // Reference Spline
-  agv::common::Path output_path_;  // Output Path
+  fop::Map map_;           // Maps (All the waypoints)
+  fop::Map local_map_;     // Selected Waypoints
+  fop::Path ref_spline_;   // Reference Spline
+  fop::Path output_path_;  // Output Path
 
   // Regnerate path flag
   bool regenerate_flag_;
@@ -227,8 +223,8 @@ private:
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
 
-  dynamic_reconfigure::Server<agv::frenet_optimal_planner_Config> server;
-  dynamic_reconfigure::Server<agv::frenet_optimal_planner_Config>::CallbackType f;
+  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
+  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config>::CallbackType f;
 
   // ###################################### Private Functions ######################################
 
@@ -238,19 +234,19 @@ private:
   // Functions for subscribing
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void objectCallback(const autoware_msgs::DetectedObjectArray& input_obstacles);
-  void laneInfoCallback(const agv::LaneInfo::ConstPtr& lane_info);
+  void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
   void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
   void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
-  void specialWaypointCallback(const agv::SpecialWaypointArray special_waypoint_msg);
+  void specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg);
 
   // Functions fo publishing results
-  void publishRefSpline(const agv::common::Path& path);
-  void publishOutputPath(const agv::common::Path& path);
-  void publishNextPath(const agv::common::FrenetPath& frenet_path);
+  void publishRefSpline(const fop::Path& path);
+  void publishOutputPath(const fop::Path& path);
+  void publishNextPath(const fop::FrenetPath& frenet_path);
   void publishEmptyPaths();
   void publishSteeringAngle(const double angle);
-  void publishTurnSignal(const agv::common::FrenetPath& best_path, const bool change_lane, const double yaw_thresh);
+  void publishTurnSignal(const fop::FrenetPath& best_path, const bool change_lane, const double yaw_thresh);
   void publishPlannerSpeed(const double speed);
   void publishCandidatePaths();
 
@@ -265,14 +261,14 @@ private:
   std::vector<double> getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width,
                                                      const double left_lane_width, const double right_lane_width);
 
-  agv::common::FrenetPath selectLane(const std::vector<agv::common::FrenetPath>& best_path_list,
+  fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list,
                                      const int current_lane);
 
-  void concatPath(const agv::common::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation,
+  void concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation,
                   const double wp_min_seperation);
 
   // Stanley Steeing Functions
-  double calculateSteeringAngle(const int next_wp_id, const agv::common::VehicleState& frontaxle_state);
+  double calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
   autoware_msgs::DetectedObject transformObjectFrame(autoware_msgs::DetectedObject object_input,
                                                      geometry_msgs::TransformStamped transform_stamped);
@@ -335,8 +331,8 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 
   candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("candidate_paths", 1);
 
-  // Instantiate FrenetOptimalTrajectoryPlanning
-  frenet_planner_instance = FrenetOptimalTrajectoryPlanning(SETTINGS);
+  // Instantiate FrenetOptimalTrajectoryPlanner
+  frenet_planner_instance = FrenetOptimalTrajectoryPlanner(SETTINGS);
 
   // Subscribe & Advertise
   odom_sub = nh.subscribe(odom_topic_, 1, &FrenetOptimalPlannerNode::odomCallback, this);
@@ -386,7 +382,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Update start state
   updateStartState();
   // Get the reference lane's centerline as a spline
-  FrenetOptimalTrajectoryPlanning::ResultType result = frenet_planner_instance.generateReferenceCurve(local_map_);
+  FrenetOptimalTrajectoryPlanner::ResultType result = frenet_planner_instance.generateReferenceCurve(local_map_);
   // Store the results into reference spline
   ref_spline_.x = result.rx;
   ref_spline_.y = result.ry;
@@ -420,13 +416,13 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   }
   ROS_DEBUG("final_offset value : %f", final_offset);
 
-  std::vector<agv::common::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
+  std::vector<fop::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
       result.cubic_spline, start_state_, final_offset, roi_boundaries_.at(0), roi_boundaries_.at(1),
       obstacles, behaviour_min_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the 3 candidates from frenetOptimalPlanning, but still using same cost functions. Behaviour
   // can use this 3 options too choose [NOT IMPLEMENTED 20191213]
-  agv::common::FrenetPath best_path = selectLane(best_path_list, current_lane_);
+  fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
   ROS_INFO("Local Planner: Best Paths Selected");
 
   // Concatenate the best path into output_path
@@ -448,7 +444,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
     if (!best_path.curvature_check)
     {
       ROS_INFO("Best path fails curvature check");
-      if (fabs(current_steering_angle_ - steering_angle_) < agv::common::deg2rad(2.5))
+      if (fabs(current_steering_angle_ - steering_angle_) < fop::deg2rad(2.5))
       {
         publishPlannerSpeed(best_path.speed);
         ROS_INFO("Local Planner: Reached desired steering angle. Buggy starts to move");
@@ -532,15 +528,15 @@ void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjec
   obstacles.header.frame_id = "map";
 }
 
-void FrenetOptimalPlannerNode::specialWaypointCallback(const agv::SpecialWaypointArray special_waypoint_msg)
+void FrenetOptimalPlannerNode::specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg)
 {
   for (auto& waypoint : special_waypoint_msg.waypoints)
   {
-    if (static_cast<common::WaypointType>(waypoint) == common::WaypointType::OFFSET_START)
+    if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_START)
     {
       narrow_path_flag = true;
     }
-    else if (static_cast<common::WaypointType>(waypoint) == common::WaypointType::OFFSET_END)
+    else if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_END)
     {
       narrow_path_flag = false;
     }
@@ -581,9 +577,9 @@ autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(aut
 }
 
 // Receive lane info from the lane publisher
-void FrenetOptimalPlannerNode::laneInfoCallback(const agv::LaneInfo::ConstPtr& lane_info)
+void FrenetOptimalPlannerNode::laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
 {
-  map_ = agv::common::Map(lane_info);
+  map_ = fop::Map(lane_info);
 }
 
 // Listen to control output
@@ -607,7 +603,7 @@ void FrenetOptimalPlannerNode::currSteeringAngleCallback(const std_msgs::Float64
 }
 
 // Publish the reference spline (for Rviz only)
-void FrenetOptimalPlannerNode::publishRefSpline(const agv::common::Path& path)
+void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
 {
   nav_msgs::Path ref_path_msg;
   ref_path_msg.header.frame_id = "map";
@@ -627,7 +623,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const agv::common::Path& path)
 }
 
 // Publish the current path (for Rviz and MPC)
-void FrenetOptimalPlannerNode::publishOutputPath(const agv::common::Path& path)
+void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
 {
   nav_msgs::Path output_path_msg;
   output_path_msg.header.frame_id = "map";
@@ -648,7 +644,7 @@ void FrenetOptimalPlannerNode::publishOutputPath(const agv::common::Path& path)
 }
 
 // Publish the best next path (for Rviz only)
-void FrenetOptimalPlannerNode::publishNextPath(const agv::common::FrenetPath& frenet_path)
+void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_path)
 {
   //! For testing and visualization
   ROS_INFO("path size: %d", (int)frenet_path.c.size());
@@ -676,7 +672,7 @@ void FrenetOptimalPlannerNode::publishPlannerSpeed(const double speed)
   double desired_speed;
   if (!output_path_.x.empty() && !output_path_.y.empty())
   {
-    const int next_frontlink_wp_id = agv::common::nextWaypoint(frontaxle_state_, output_path_) + NUM_LOOK_AHEAD_WP;
+    const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_) + NUM_LOOK_AHEAD_WP;
     if (output_path_.x.size() < next_frontlink_wp_id + 2)
     {
       ROS_INFO("Local Planner: Path is too short. Planner speed = 0.");
@@ -705,7 +701,7 @@ void FrenetOptimalPlannerNode::publishPlannerSpeed(const double speed)
  */
 void FrenetOptimalPlannerNode::publishCandidatePaths()
 {
-  visualization_msgs::MarkerArray candidate_paths_markers = common::LocalPlannerVisualization::visualizeCandidatePaths(
+  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidatePaths(
       frenet_planner_instance.safest_paths, frenet_planner_instance.close_proximity_paths,
       frenet_planner_instance.unsafe_paths, frenet_planner_instance.backup_unchecked_paths,
       frenet_planner_instance.backup_safest_paths, frenet_planner_instance.backup_close_proximity_paths,
@@ -718,9 +714,9 @@ void FrenetOptimalPlannerNode::publishCandidatePaths()
 void FrenetOptimalPlannerNode::publishEmptyPaths()
 {
   // Publish empty paths
-  publishRefSpline(agv::common::Path());
-  publishOutputPath(agv::common::Path());
-  publishNextPath(agv::common::FrenetPath());
+  publishRefSpline(fop::Path());
+  publishOutputPath(fop::Path());
+  publishNextPath(fop::FrenetPath());
 }
 
 // Update the vehicle front axle state (used in odomcallback)
@@ -747,7 +743,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     return false;
   }
 
-  int start_id = agv::common::lastWaypoint(current_state_, map_);
+  int start_id = fop::lastWaypoint(current_state_, map_);
 
   // if reached the end of the lane, stop
   if (start_id >= map_.x.size() - 2)  // exclude last 2 waypoints for safety, and prevent code crashing
@@ -755,9 +751,9 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     return false;
   }
 
-  const double dist = agv::common::distance(map_.x[start_id], map_.y[start_id], current_state_.x, current_state_.y);
+  const double dist = fop::distance(map_.x[start_id], map_.y[start_id], current_state_.x, current_state_.y);
   const double lane_heading = atan2(map_.dy[start_id], map_.dx[start_id]) + M_PI / 2;
-  const double heading_diff = agv::common::unifyAngleRange(current_state_.yaw - lane_heading);
+  const double heading_diff = fop::unifyAngleRange(current_state_.yaw - lane_heading);
 
   if (dist > DISTANCE_THRESH)
   {
@@ -804,7 +800,7 @@ void FrenetOptimalPlannerNode::updateStartState()
   if (!local_map_.x.empty())
   {
     // The new starting state
-    // agv::common::FrenetState new_state;
+    // fop::FrenetState new_state;
 
     // if the current path size is too small, regenerate
     if (output_path_.x.size() < OUTPUT_PATH_MIN_SIZE)
@@ -818,8 +814,8 @@ void FrenetOptimalPlannerNode::updateStartState()
       ROS_INFO("Local Planner: Regenerating The Entire Path...");
       // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_map_, but
       // at fringe cases, such as start of code, ref spline might not be available
-      start_state_ = ref_spline_.yaw.empty() ? agv::common::getFrenet(current_state_, local_map_) :
-                                               agv::common::getFrenet(current_state_, ref_spline_);
+      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(current_state_, local_map_) :
+                                               fop::getFrenet(current_state_, ref_spline_);
 
       // Clear the last output path
       output_path_.clear();
@@ -835,11 +831,11 @@ void FrenetOptimalPlannerNode::updateStartState()
           hypot(output_path_.x.back() - output_path_.x.end()[-2], output_path_.y.back() - output_path_.y.end()[-2]) /
           SETTINGS.tick_t;
       // End of the previous path state
-      agv::common::VehicleState last_state = agv::common::VehicleState(output_path_.x.back(), output_path_.y.back(),
+      fop::VehicleState last_state = fop::VehicleState(output_path_.x.back(), output_path_.y.back(),
                                                                        output_path_.yaw.back(), output_path_last_speed);
 
-      start_state_ = ref_spline_.yaw.empty() ? agv::common::getFrenet(last_state, local_map_) :
-                                               agv::common::getFrenet(last_state, ref_spline_);
+      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(last_state, local_map_) :
+                                               fop::getFrenet(last_state, ref_spline_);
     }
 
     // Ensure the speed is above the minimum planning speed
@@ -885,10 +881,10 @@ std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(con
 }
 
 // Select the ideal lane to proceed
-agv::common::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<agv::common::FrenetPath>& best_path_list,
+fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::FrenetPath>& best_path_list,
                                                      const int current_lane)
 {
-  agv::common::FrenetPath best_path;
+  fop::FrenetPath best_path;
   bool change_lane_flag;
   int keep_lane_id = -1;
   int change_lane_id = -1;
@@ -953,7 +949,7 @@ agv::common::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<a
     ROS_DEBUG("Local Planner: No Path Available");
     change_lane_flag = false;
     // dummy path
-    best_path = agv::common::FrenetPath();
+    best_path = fop::FrenetPath();
   }
 
   publishTurnSignal(best_path, change_lane_flag, TURN_YAW_THRESH);
@@ -962,7 +958,7 @@ agv::common::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<a
 }
 
 // Concatenate the best next path to the current path
-void FrenetOptimalPlannerNode::concatPath(const agv::common::FrenetPath& frenet_path, const int path_size,
+void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, const int path_size,
                                   const double wp_max_seperation, const double wp_min_seperation)
 {
   // Concatenate the best path to the output path
@@ -978,11 +974,11 @@ void FrenetOptimalPlannerNode::concatPath(const agv::common::FrenetPath& frenet_
     if (!output_path_.x.empty())
     {
       wp_seperation =
-          agv::common::distance(output_path_.x.back(), output_path_.y.back(), frenet_path.x.at(i), frenet_path.y.at(i));
+          fop::distance(output_path_.x.back(), output_path_.y.back(), frenet_path.x.at(i), frenet_path.y.at(i));
     }
     else
     {
-      wp_seperation = agv::common::distance(frenet_path.x.at(i), frenet_path.y.at(i), frenet_path.x.at(i + 1),
+      wp_seperation = fop::distance(frenet_path.x.at(i), frenet_path.y.at(i), frenet_path.x.at(i + 1),
                                             frenet_path.y.at(i + 1));
     }
 
@@ -1004,11 +1000,11 @@ void FrenetOptimalPlannerNode::concatPath(const agv::common::FrenetPath& frenet_
   // Calculate steering angle
   if (!output_path_.x.empty() && !output_path_.y.empty())
   {
-    const int next_frontlink_wp_id = agv::common::nextWaypoint(frontaxle_state_, output_path_);
+    const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_);
     ROS_INFO("Local Planner: Stanley Start");
     steering_angle_ = calculateSteeringAngle(next_frontlink_wp_id, frontaxle_state_);
 
-    const int next_wp_id = agv::common::nextWaypoint(current_state_, output_path_);
+    const int next_wp_id = fop::nextWaypoint(current_state_, output_path_);
 
     for (int i = 0; i < next_wp_id; i++)
     {
@@ -1024,7 +1020,7 @@ void FrenetOptimalPlannerNode::concatPath(const agv::common::FrenetPath& frenet_
 }
 
 // Steering Help Function
-double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, const agv::common::VehicleState& frontaxle_state)
+double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state)
 {
   const double wp_id = next_wp_id + NUM_LOOK_AHEAD_WP;
   // std::cout << "Output Path Size: " << output_path_.x.size() << " Next Waypoint ID: " << wp_id << std::endl;
@@ -1040,10 +1036,10 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
   else
   {
     // First Term
-    const double delta_yaw = agv::common::unifyAngleRange(output_path_.yaw.at(wp_id) - current_state_.yaw);
+    const double delta_yaw = fop::unifyAngleRange(output_path_.yaw.at(wp_id) - current_state_.yaw);
 
     // Second Term
-    const double c = agv::common::distance(output_path_.x.at(wp_id), output_path_.y.at(wp_id),
+    const double c = fop::distance(output_path_.x.at(wp_id), output_path_.y.at(wp_id),
                                            output_path_.x.at(wp_id + 1), output_path_.y.at(wp_id + 1));
     // if two waypoints overlapped, return error value
     if (c <= WP_MIN_SEP)
@@ -1052,8 +1048,8 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
       return ERROR_VALUE;
     }
     const double a =
-        agv::common::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id), output_path_.y.at(wp_id));
-    const double b = agv::common::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id + 1),
+        fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id), output_path_.y.at(wp_id));
+    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id + 1),
                                            output_path_.y.at(wp_id + 1));
     // if the vehicle is too far from the waypoint, return error value
     if (a >= WP_MAX_SEP || b >= WP_MAX_SEP)
@@ -1072,14 +1068,14 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
     const double vectors_angle_diff =
         atan2(frontaxle_state.y - output_path_.y.at(wp_id), frontaxle_state.x - output_path_.x.at(wp_id)) -
         output_path_.yaw.at(wp_id);
-    const double vectors_angle_diff_unified = agv::common::unifyAngleRange(vectors_angle_diff);
+    const double vectors_angle_diff_unified = fop::unifyAngleRange(vectors_angle_diff);
     const int direction = vectors_angle_diff_unified < 0 ? 1 : -1;
 
     // Final Angle
     steering_angle_ = STANLEY_OVERALL_GAIN * (delta_yaw + direction * atan(TRACK_ERROR_GAIN * x / u));
     // Check if exceeding max steering angle
-    steering_angle_ = agv::common::limitWithinRange(steering_angle_, -MAX_STEERING_ANGLE, MAX_STEERING_ANGLE);
-    std::cout << "Steering Angle: " << agv::common::rad2deg(steering_angle_) << " degrees" << std::endl;
+    steering_angle_ = fop::limitWithinRange(steering_angle_, -MAX_STEERING_ANGLE, MAX_STEERING_ANGLE);
+    std::cout << "Steering Angle: " << fop::rad2deg(steering_angle_) << " degrees" << std::endl;
 
     return steering_angle_;
   }
@@ -1104,7 +1100,7 @@ void FrenetOptimalPlannerNode::publishSteeringAngle(const double angle)
 }
 
 // Publish the turn signal
-void FrenetOptimalPlannerNode::publishTurnSignal(const agv::common::FrenetPath& best_path, const bool change_lane,
+void FrenetOptimalPlannerNode::publishTurnSignal(const fop::FrenetPath& best_path, const bool change_lane,
                                          const double yaw_thresh)
 {
   if (change_lane)
@@ -1171,12 +1167,12 @@ void FrenetOptimalPlannerNode::publishTurnSignal(const agv::common::FrenetPath& 
   turn_signal_pub.publish(turn_signal_msg);
 }
 
-}  // namespace frenet_optimal_planner
+}  // namespace fop
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "frenet_optimal_planner_node");
-  frenet_optimal_planner::FrenetOptimalPlannerNode frenet_optimal_planner_node;
+  fop::FrenetOptimalPlannerNode frenet_optimal_planner_node;
   ros::spin();  // spin the ros node.
   return 0;
 }
