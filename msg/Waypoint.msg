@@ -1,0 +1,9 @@
+float64 x
+float64 y
+float64 dx
+float64 dy
+float64 s
+float64 left_width
+float64 right_width
+float64 far_right_width
+int64 special_point
