@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find agv)/config/rosconsole.config"/>
+
+<!-- Path planner -->
+  <node name="local_planner_node" pkg="agv" type="local_planner_node" output="screen">
+    
+    <!-- Input Topic Names -->
+    <param name="odom_topic"                    value="/simulator/ground_truth/odom"/>
+    <param name="objects_topic"                 value="/detection/lidar_detector/objects"/>
+    <param name="lane_info_topic"               value="/lane_publisher/lane_info"/>
+    <param name="cmd_topic"                     value="/cmd_vel_out"/>
+    <param name="behaviour_min_speed_topic"		  value="/behaviour_planner/min_speed"/>
+    <param name="current_steering_angle_topic" 	value="/present_steering_angle"/>
+    <Param name="special_waypoint_topic"	      value="/lane_publisher/special_waypoints"/>
+
+    <!-- Output Topic Names -->
+    <param name="output_path_topic"             value="local_planner/output_path"/>
+    <param name="next_path_topic"               value="local_planner/next_path"/>
+    <param name="ref_path_topic"                value="local_planner/ref_path"/>
+    <param name="steering_angle_topic"          value="/desired_steering_angle"/>
+    <param name="turn_signal_topic"             value="/turn_signal"/>
+    <param name="planner_target_speed_topic"    value="local_planner/target_speed"/>
+    <!-- <param name="turn_yaw_thresh"       value="0.785"/>
+    <param name="turn_d_thresh"         value="1.5"/> -->
+
+    <!-- Hyperparameters -->
+    <param name="planning_frequency"    value="10.0"/>
+    <!-- <param name="output_path_max_size"  value="10"/>
+    <param name="output_path_min_size"  value="7"/> -->
+
+    <!-- Safety Criteria -->
+    <!-- <param name="hard_safety_margin"    value="0.3"/>
+    <param name="soft_safety_margin"    value="1.0"/>
+    <param name="vehicle_width"         value="1.4"/> -->
+    
+    <!--Steering Related Hyperparameters -->
+    <!-- <param name="stanley_overall_gain"  value="0.6"/>
+    <param name="track_error_gain"      value="0.2"/>
+    <param name="max_steering_angle"    value="0.336"/> -->
+    
+    <!-- Planner Sampling Related Params-->
+    <!-- Sampling Width -->
+    <!-- <param name="left_road_width"       value="3.0"/>
+    <param name="right_road_width"      value="3.0"/>
+    <param name="center_offset"         value="-0.3"/>
+    <param name="delta_width"           value="0.3"/> -->
+    <!-- look-ahead time (Sampling Length) -->
+    <!-- <param name="max_t"                 value="10.0"/>
+    <param name="min_t"                 value="5.0"/>
+    <param name="delta_t"               value="2.5"/>
+    <param name="tick_t"                value="0.3"/> -->
+    <!-- Sampling Length-->
+    <!-- <param name="target_speed"          value="2.5"/>
+    <param name="delta_speed"           value="0.5"/>
+    <param name="num_max_sample"        value="0"/> -->
+
+    <!-- Hard Kinetic Constraints -->
+    <!-- <param name="max_speed"             value="3.33"/>
+    <param name="max_accel"             value="1.0"/>
+    <param name="max_deccel"            value="-1.0"/>
+    <param name="max_curvature"         value="1.0"/> -->
+
+    <!-- Weights of Cost Functions -->
+    <!-- <param name="kj"                    value="0.1"/>
+    <param name="kt"                    value="0.1"/>
+    <param name="kd"                    value="1.0"/>
+    <param name="klat"                  value="3.0"/>
+    <param name="klon"                  value="1.0"/>
+    <param name="kobstacle"             value="0.5"/> -->
+  </node>
+
+</launch>
