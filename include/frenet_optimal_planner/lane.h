@@ -10,6 +10,8 @@
 
 #include <vector>
 
+#include <tf/tf.h>
+#include <nav_msgs/Path.h>
 #include <frenet_optimal_planner/LaneInfo.h>
 
 #include "math_utils.h"
@@ -35,25 +37,53 @@ enum LaneID
   LEFT_LANE,
   RIGHT_LANE
 };
+
+struct Waypoint
+{
+ public:
+  double x, y, yaw;
   
-class Map
+  Waypoint();
+  Waypoint(const double x, const double y, const double yaw);
+  Waypoint(const tf::Pose& pose);
+  Waypoint(const geometry_msgs::Pose& pose_msg);
+};
+
+struct LanePoint
+{
+ public:
+  double left_width, right_width;
+  double far_left_width, far_right_width;
+  Waypoint point;
+  
+  LanePoint();
+  LanePoint(const Waypoint& point, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
+  LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
+};
+  
+class Lane
 {
  public:
   // constructors
-  Map(){};
-  Map(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
+  Lane(){};
+  // Lane(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
+  Lane(const nav_msgs::Path::ConstPtr& ref_path, const double lane_width, const double left_lane_width, const double right_lane_width);
   // Destructor
-  virtual ~Map(){};
+  virtual ~Lane(){};
 
-  std::vector<double> x;
-  std::vector<double> y;
-  std::vector<double> dx;
-  std::vector<double> dy;
-  std::vector<double> s;
-  std::vector<double> left_widths;
-  std::vector<double> right_widths;
-  std::vector<double> far_right_widths;
-  std::vector<int> special_points;
+  std::vector<LanePoint> points;
+  // std::vector<double> x;
+  // std::vector<double> y;
+  // std::vector<double> yaw;
+  // std::vector<double> dx;
+  // std::vector<double> dy;
+  // std::vector<double> s;
+  // std::vector<tf::Pose> poses;
+  // std::vector<double> left_widths;
+  // std::vector<double> right_widths;
+  // std::vector<double> far_left_widths;
+  // std::vector<double> far_right_widths;
+  // std::vector<int> special_points;
 
   // Clear all contents
   void clear();
@@ -77,15 +107,15 @@ class Path
 
 // Find the ID of the closest waypoint wrt current x, y position
 int closestWaypoint(VehicleState current_state, const Path& path);
-int closestWaypoint(VehicleState current_state, const Map& map);
+int closestWaypoint(VehicleState current_state, const Lane& map);
 
 // Find the ID of the next waypoint of the closest waypoint wrt current x, y position
 int nextWaypoint(VehicleState current_state, const Path& path);
-int nextWaypoint(VehicleState current_state, const Map& map);
+int nextWaypoint(VehicleState current_state, const Lane& map);
 
 // Find the ID of the previous waypoint
 int lastWaypoint(VehicleState current_state, const Path& path);
-int lastWaypoint(VehicleState current_state, const Map& map);
+int lastWaypoint(VehicleState current_state, const Lane& map);
 
 }  // end of namespace fop
 

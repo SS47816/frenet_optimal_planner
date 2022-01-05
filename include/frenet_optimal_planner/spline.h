@@ -61,7 +61,7 @@ class Spline2D
 public:
   // Constructors
   Spline2D(){};
-  Spline2D(const Map& ref_wps);
+  Spline2D(const Lane& ref_wps);
   // Destructor
   virtual ~Spline2D(){};
 
@@ -87,11 +87,11 @@ public:
   // Calculate yaw at the point
   double calculateYaw(double s);
   // Construct the spline
-  ResultType calculateSplineCourse(const Map& ref_wps, double ds);
+  ResultType calculateSplineCourse(const Lane& ref_wps, double ds);
 
 private:
   // Calculate a list of s
-  std::vector<double> calculate_s(const Map& ref_wps);
+  std::vector<double> calculate_s(const Lane& ref_wps);
 };
 
 }  // namespace fop

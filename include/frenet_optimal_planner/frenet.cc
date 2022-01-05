@@ -11,42 +11,43 @@
 namespace fop
 {
 
-FrenetState getFrenet(VehicleState current_state, const Map& map)
+FrenetState getFrenet(VehicleState current_state, const Lane& lane)
 {
   // std::cout << "getFrenet() Break 0" << std::endl;
 
-  int next_wp_id = nextWaypoint(current_state, map);
+  int next_wp_id = nextWaypoint(current_state, lane);
   int prev_wp_id = next_wp_id - 1;
 
   // std::cout << "getFrenet() Break 1" << std::endl;
 
   // if it reaches the end of the waypoint list
-  if (next_wp_id >= map.x.size())
+  if (next_wp_id >= lane.points.size())
   {
-    prev_wp_id = map.x.size() - 1;
+    prev_wp_id = lane.points.size() - 1;
   }
 
-  // std::vector n from previous waypoint to next waypoint
-  double n_x = map.x.at(next_wp_id) - map.x.at(prev_wp_id);
-  double n_y = map.y.at(next_wp_id) - map.y.at(prev_wp_id);
-  // std::vector x from previous waypoint to current position
-  double x_x = current_state.x - map.x.at(prev_wp_id);
-  double x_y = current_state.y - map.y.at(prev_wp_id);
-
+  // vector n from previous waypoint to next waypoint
+  const double n_x = lane.points[next_wp_id].point.x - lane.points[prev_wp_id].point.x;
+  const double n_y = lane.points[next_wp_id].point.y - lane.points[prev_wp_id].point.y;
+  // vector x from previous waypoint to current position
+  const double x_x = current_state.x - lane.points[prev_wp_id].point.x;
+  const double x_y = current_state.y - lane.points[prev_wp_id].point.y;
+  const double x_yaw = atan2(x_y, x_x);
   // std::cout << "getFrenet() Break 2" << std::endl;
 
   // find the projection of x on n
-  double proj_norm = (x_x * n_x + x_y * n_y) / (n_x * n_x + n_y * n_y);
-  double proj_x = proj_norm * n_x;
-  double proj_y = proj_norm * n_y;
+  const double proj_norm = (x_x * n_x + x_y * n_y) / (n_x * n_x + n_y * n_y);
+  const double proj_x = proj_norm * n_x;
+  const double proj_y = proj_norm * n_y;
 
   FrenetState state;
   state.d = distance(x_x, x_y, proj_x, proj_y);
 
-  // get the normal std::vector d
-  double d_x = map.dx.at(prev_wp_id);
-  double d_y = map.dy.at(prev_wp_id);
-  double wp_yaw = atan2(d_y, d_x) + M_PI / 2;
+  // get the normal vector d
+  // double d_x = lane.dx[prev_wp_id];
+  // double d_y = lane.dy[prev_wp_id];
+  // double wp_yaw = atan2(d_y, d_x) + M_PI / 2;
+  const double wp_yaw = lane.points[prev_wp_id].point.yaw;
   double delta_yaw = current_state.yaw - wp_yaw;
   while (delta_yaw > M_PI)
   {
@@ -60,18 +61,22 @@ FrenetState getFrenet(VehicleState current_state, const Map& map)
   // std::cout << "getFrenet() Break 3" << std::endl;
 
   // find the projection of x on d
-  double proj_x_d = x_x * d_x + x_y * d_y;
-
-  if (proj_x_d >= 0)
+  // double proj_x_d = x_x * d_x + x_y * d_y;
+  // if (proj_x_d >= 0)
+  // {
+  //   state.d *= -1;
+  // }
+  if (wp_yaw >= x_yaw)
   {
     state.d *= -1;
   }
+  
 
   // calculate s value
   state.s = 0;
   for (int i = 0; i < prev_wp_id; i++)
   {
-    state.s += distance(map.x.at(i), map.y.at(i), map.x.at(i + 1), map.y.at(i + 1));
+    state.s += distance(lane.points[i].point.x, lane.points[i].point.y, lane.points[i+1].point.x, lane.points[i+1].point.y);
   }
 
   state.s += distance(0.0, 0.0, proj_x, proj_y);
@@ -101,11 +106,11 @@ FrenetState getFrenet(VehicleState current_state, const Path& path)
   // std::cout << "getFrenet() Break 1" << std::endl;
 
   // std::vector n from previous waypoint to next waypoint
-  const double n_x = path.x.at(next_wp_id) - path.x.at(prev_wp_id);
-  const double n_y = path.y.at(next_wp_id) - path.y.at(prev_wp_id);
+  const double n_x = path.x[next_wp_id] - path.x[prev_wp_id];
+  const double n_y = path.y[next_wp_id] - path.y[prev_wp_id];
   // std::vector x from previous waypoint to current position
-  const double x_x = current_state.x - path.x.at(prev_wp_id);
-  const double x_y = current_state.y - path.y.at(prev_wp_id);
+  const double x_x = current_state.x - path.x[prev_wp_id];
+  const double x_y = current_state.y - path.y[prev_wp_id];
 
   // std::cout << "getFrenet() Break 2" << std::endl;
 
@@ -118,7 +123,7 @@ FrenetState getFrenet(VehicleState current_state, const Path& path)
   state.d = distance(x_x, x_y, proj_x, proj_y);
 
   // get the normal std::vector d
-  const double wp_yaw = path.yaw.at(prev_wp_id);
+  const double wp_yaw = path.yaw[prev_wp_id];
   const double delta_yaw = fop::unifyAngleRange(current_state.yaw - wp_yaw);
 
   // std::cout << "getFrenet() Break 3" << std::endl;
@@ -136,7 +141,7 @@ FrenetState getFrenet(VehicleState current_state, const Path& path)
   state.s = 0;
   for (int i = 0; i < prev_wp_id; i++)
   {
-    state.s += distance(path.x.at(i), path.y.at(i), path.x.at(i + 1), path.y.at(i + 1));
+    state.s += distance(path.x[i], path.y[i], path.x[i + 1], path.y[i + 1]);
   }
   state.s += distance(0.0, 0.0, proj_x, proj_y);
 

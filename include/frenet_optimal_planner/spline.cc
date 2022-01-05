@@ -24,7 +24,7 @@ Spline::Spline(const std::vector<double>& x, const std::vector<double>& y)
   std::vector<double> h;
   for (int i = 0; i < x.size() - 1; i++)
   {
-    h.push_back(x.at(i + 1) - x.at(i));
+    h.push_back(x[i+1] - x[i]);
   }
 
   // calculate coefficient a
@@ -45,14 +45,14 @@ Spline::Spline(const std::vector<double>& x, const std::vector<double>& y)
   // calculate coefficient b and d
   for (int i = 0; i < num_x_ - 1; i++)
   {
-    d_.push_back((c_.at(i + 1) - c_.at(i)) / (3.0 * h.at(i)));
-    b_.push_back((a_.at(i + 1) - a_.at(i)) / h.at(i) - h.at(i) * (c_.at(i + 1) + 2.0 * c_.at(i)) / 3.0);
+    d_.push_back((c_[i+1] - c_[i]) / (3.0 * h[i]));
+    b_.push_back((a_[i+1] - a_[i]) / h[i] - h[i] * (c_[i+1] + 2.0 * c_[i]) / 3.0);
   }
 };
 
 double Spline::calculatePoint(double t)
 {
-  if (t < x_.at(0))
+  if (t < x_[0])
   {
     // std::cout << "condition 1" << std::endl;
     return 0.0;
@@ -64,15 +64,15 @@ double Spline::calculatePoint(double t)
   }
 
   const int i = searchIndex(t);
-  const double dx = t - x_.at(i);
-  const double result = a_.at(i) + b_.at(i) * dx + c_.at(i) * dx * dx + d_.at(i) * dx * dx * dx;
+  const double dx = t - x_[i];
+  const double result = a_[i] + b_[i] * dx + c_[i] * dx * dx + d_[i] * dx * dx * dx;
 
   return result;
 }
 
 double Spline::calculateFirstDerivative(double t)
 {
-  if (t < x_.at(0))
+  if (t < x_[0])
   {
     return 0.0;
   }
@@ -82,15 +82,15 @@ double Spline::calculateFirstDerivative(double t)
   }
 
   const int i = searchIndex(t);
-  const double dx = t - x_.at(i);
-  const double result = b_.at(i) + 2.0 * c_.at(i) * dx + 3.0 * d_.at(i) * dx * dx;
+  const double dx = t - x_[i];
+  const double result = b_[i] + 2.0 * c_[i] * dx + 3.0 * d_[i] * dx * dx;
 
   return result;
 }
 
 double Spline::calculateSecondDerivative(double t)
 {
-  if (t < x_.at(0))
+  if (t < x_[0])
   {
     return 0.0;
   }
@@ -100,8 +100,8 @@ double Spline::calculateSecondDerivative(double t)
   }
 
   const int i = searchIndex(t);
-  const double dx = t - x_.at(i);
-  const double result = 2.0 * c_.at(i) + 6.0 * d_.at(i) * dx;
+  const double dx = t - x_[i];
+  const double result = 2.0 * c_[i] + 6.0 * d_[i] * dx;
 
   return result;
 }
@@ -136,7 +136,7 @@ int Spline::searchIndex(double x)
   int index = 0;
   for (int i = 0; i < x_.size(); i++)
   {
-    if (fop::cmp_doubles_greater_or_equal(x, x_.at(i)))
+    if (fop::cmp_doubles_greater_or_equal(x, x_[i]))
     {
       index = i;
     }
@@ -149,11 +149,17 @@ int Spline::searchIndex(double x)
 /****************************************************************************
  * 2D Spline
  ****************************************************************************/
-Spline2D::Spline2D(const Map& ref_wps)
+Spline2D::Spline2D(const Lane& ref_wps)
 {
   s_ = calculate_s(ref_wps);
-  sx_ = Spline(s_, ref_wps.x);
-  sy_ = Spline(s_, ref_wps.y);
+  std::vector<double> x, y;
+  for (auto& point : ref_wps.points)
+  {
+    x.push_back(point.point.x);
+    y.push_back(point.point.y);
+  }
+  sx_ = Spline(s_, x);
+  sy_ = Spline(s_, y);
 }
 
 VehicleState Spline2D::calculatePosition(double s)
@@ -182,7 +188,7 @@ double Spline2D::calculateYaw(double s)
   return atan2(dy, dx);
 }
 
-Spline2D::ResultType Spline2D::calculateSplineCourse(const Map& ref_wps, double ds = 0.1)
+Spline2D::ResultType Spline2D::calculateSplineCourse(const Lane& ref_wps, double ds = 0.1)
 {
   Spline2D spline2d = Spline2D(ref_wps);
 
@@ -199,22 +205,22 @@ Spline2D::ResultType Spline2D::calculateSplineCourse(const Map& ref_wps, double 
   return result;
 }
 
-std::vector<double> Spline2D::calculate_s(const Map& ref_wps)
+std::vector<double> Spline2D::calculate_s(const Lane& ref_wps)
 {
   // store the difference along x and y axis in dx and dy variables
   std::vector<double> dx;
   std::vector<double> dy;
-  for (int i = 0; i < ref_wps.x.size() - 1; i++)
+  for (int i = 0; i < ref_wps.points.size() - 1; i++)
   {
-    dx.push_back(ref_wps.x.at(i + 1) - ref_wps.x.at(i));
-    dy.push_back(ref_wps.y.at(i + 1) - ref_wps.y.at(i));
+    dx.push_back(ref_wps.points[i+1].point.x - ref_wps.points[i].point.x);
+    dy.push_back(ref_wps.points[i+1].point.y - ref_wps.points[i].point.y);
   }
 
   // compute the euclidean distances between reference waypoints
   std::vector<double> ds;
   for (int i = 0; i < dx.size(); i++)
   {
-    ds.push_back(sqrt(dx.at(i) * dx.at(i) + dy.at(i) * dy.at(i)));
+    ds.push_back(sqrt(dx[i] * dx[i] + dy[i] * dy[i]));
   }
 
   // compute the cumulative distances from the starting point
@@ -222,7 +228,7 @@ std::vector<double> Spline2D::calculate_s(const Map& ref_wps)
   s.push_back(0.0);
   for (int i = 0; i < ds.size(); i++)
   {
-    s.push_back(s.at(i) + ds.at(i));
+    s.push_back(s[i] + ds[i]);
   }
 
   return s;

@@ -17,10 +17,10 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTraj
 }
 
 FrenetOptimalTrajectoryPlanner::ResultType
-FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Map& map)
+FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
 {
   FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
-  result.cubic_spline = fop::Spline2D(map);
+  result.cubic_spline = fop::Spline2D(lane);
 
   std::vector<double> s;
   for (double i = 0; i < result.cubic_spline.s_.back(); i += 0.1)
@@ -30,11 +30,11 @@ FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Map& map)
 
   for (int i = 0; i < s.size(); i++)
   {
-    fop::VehicleState state = result.cubic_spline.calculatePosition(s.at(i));
+    fop::VehicleState state = result.cubic_spline.calculatePosition(s[i]);
     result.rx.push_back(state.x);
     result.ry.push_back(state.y);
-    result.ryaw.push_back(result.cubic_spline.calculateYaw(s.at(i)));
-    result.rk.push_back(result.cubic_spline.calculateCurvature(s.at(i)));
+    result.ryaw.push_back(result.cubic_spline.calculateYaw(s[i]));
+    result.rk.push_back(result.cubic_spline.calculateCurvature(s[i]));
   }
 
   return result;
@@ -199,8 +199,8 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         // calculate total squared jerks
         for (int i = 0; i < target_frenet_path.t.size(); i++)
         {
-          jerk_s += pow(target_frenet_path.s_ddd.at(i), 2);
-          jerk_d += pow(target_frenet_path.d_ddd.at(i), 2);
+          jerk_s += pow(target_frenet_path.s_ddd[i], 2);
+          jerk_d += pow(target_frenet_path.d_ddd[i], 2);
         }
 
         // encourage longer planning time
@@ -233,37 +233,37 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
   {
     // std::cout << "Break 1" << std::endl;
     // calculate global positions
-    for (int j = 0; j < frenet_paths_list.at(i).s.size(); j++)
+    for (int j = 0; j < frenet_paths_list[i].s.size(); j++)
     {
       // std::cout << "Break 1.1" << std::endl;
-      fop::VehicleState state = cubic_spline.calculatePosition(frenet_paths_list.at(i).s.at(j));
+      fop::VehicleState state = cubic_spline.calculatePosition(frenet_paths_list[i].s[j]);
       // std::cout << "Break 1.2" << std::endl;
-      double i_yaw = cubic_spline.calculateYaw(frenet_paths_list.at(i).s.at(j));
+      double i_yaw = cubic_spline.calculateYaw(frenet_paths_list[i].s[j]);
       // std::cout << "Break 1.3" << std::endl;
-      double di = frenet_paths_list.at(i).d.at(j);
+      double di = frenet_paths_list[i].d[j];
       double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
       double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
-      frenet_paths_list.at(i).x.push_back(frenet_x);
-      frenet_paths_list.at(i).y.push_back(frenet_y);
+      frenet_paths_list[i].x.push_back(frenet_x);
+      frenet_paths_list[i].y.push_back(frenet_y);
     }
     // calculate yaw and ds
-    for (int j = 0; j < frenet_paths_list.at(i).x.size() - 1; j++)
+    for (int j = 0; j < frenet_paths_list[i].x.size() - 1; j++)
     {
-      double dx = frenet_paths_list.at(i).x.at(j + 1) - frenet_paths_list.at(i).x.at(j);
-      double dy = frenet_paths_list.at(i).y.at(j + 1) - frenet_paths_list.at(i).y.at(j);
-      frenet_paths_list.at(i).yaw.push_back(atan2(dy, dx));
-      frenet_paths_list.at(i).ds.push_back(sqrt(dx * dx + dy * dy));
+      double dx = frenet_paths_list[i].x[j+1] - frenet_paths_list[i].x[j];
+      double dy = frenet_paths_list[i].y[j+1] - frenet_paths_list[i].y[j];
+      frenet_paths_list[i].yaw.push_back(atan2(dy, dx));
+      frenet_paths_list[i].ds.push_back(sqrt(dx * dx + dy * dy));
     }
 
-    frenet_paths_list.at(i).yaw.push_back(frenet_paths_list.at(i).yaw.back());
-    frenet_paths_list.at(i).ds.push_back(frenet_paths_list.at(i).ds.back());
+    frenet_paths_list[i].yaw.push_back(frenet_paths_list[i].yaw.back());
+    frenet_paths_list[i].ds.push_back(frenet_paths_list[i].ds.back());
 
     // calculate curvature
-    for (int j = 0; j < frenet_paths_list.at(i).yaw.size() - 1; j++)
+    for (int j = 0; j < frenet_paths_list[i].yaw.size() - 1; j++)
     {
-      double yaw_diff = frenet_paths_list.at(i).yaw.at(j + 1) - frenet_paths_list.at(i).yaw.at(j);
+      double yaw_diff = frenet_paths_list[i].yaw[j+1] - frenet_paths_list[i].yaw[j];
       yaw_diff = fop::unifyAngleRange(yaw_diff);
-      frenet_paths_list.at(i).c.push_back(yaw_diff / frenet_paths_list.at(i).ds.at(j));
+      frenet_paths_list[i].c.push_back(yaw_diff / frenet_paths_list[i].ds[j]);
     }
   }
 
@@ -293,19 +293,19 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
   {
     double cost = 0;
 
-    double buggy_center_x = frenet_path.x.at(i) + fop::Vehicle::Lf() * cos(frenet_path.yaw.at(i));
-    double buggy_center_y = frenet_path.y.at(i) + fop::Vehicle::Lf() * sin(frenet_path.yaw.at(i));
+    double buggy_center_x = frenet_path.x[i] + fop::Vehicle::Lf() * cos(frenet_path.yaw[i]);
+    double buggy_center_y = frenet_path.y[i] + fop::Vehicle::Lf() * sin(frenet_path.yaw[i]);
 
     buggy_rect = sat_collision_checker_instance.construct_rectangle(buggy_center_x, buggy_center_y,
-                                                                    frenet_path.yaw.at(i), settings_.vehicle_length,
+                                                                    frenet_path.yaw[i], settings_.vehicle_length,
                                                                     settings_.vehicle_width, TRUE_SIZE_MARGIN);
 
-    // buggy_hard_margin = sat_collision_checker_instance.construct_rectangle(frenet_path.x.at(i), frenet_path.y.at(i),
-    //                                                                 frenet_path.yaw.at(i), settings_.vehicle_length,
+    // buggy_hard_margin = sat_collision_checker_instance.construct_rectangle(frenet_path.x[i], frenet_path.y[i],
+    //                                                                 frenet_path.yaw[i], settings_.vehicle_length,
     //                                                                 vehicle_width, HARD_MARGIN);
 
     buggy_soft_margin = sat_collision_checker_instance.construct_rectangle(
-        buggy_center_x, buggy_center_y, frenet_path.yaw.at(i), settings_.vehicle_length, settings_.vehicle_width,
+        buggy_center_x, buggy_center_y, frenet_path.yaw[i], settings_.vehicle_length, settings_.vehicle_width,
         settings_.soft_safety_margin);
 
     for (auto& object : obstacles.objects)
@@ -368,13 +368,13 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
     for (int j = 0; j < frenet_path.c.size(); j++)
     {
-      if (frenet_path.s_d.at(j) > settings_.max_speed)
+      if (frenet_path.s_d[j] > settings_.max_speed)
       {
         safe = false;
         // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
         break;
       }
-      else if (frenet_path.s_dd.at(j) > settings_.max_accel || frenet_path.s_dd.at(j) < settings_.max_decel)
+      else if (frenet_path.s_dd[j] > settings_.max_accel || frenet_path.s_dd[j] < settings_.max_decel)
       {
         safe = false;
         // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
@@ -391,11 +391,11 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       {
         if (j > 0 && j < path_size)
         {
-          if (fabs(frenet_path.c.at(j) - frenet_path.c.at(j - 1)) > max_curvature_change)
+          if (fabs(frenet_path.c[j] - frenet_path.c[j-1]) > max_curvature_change)
           {
             frenet_path.curvature_check = false;
             // std::cout << "Exceeded max curvature change = " << max_curvature_change << ". Curr curvature change = "
-            // << (frenet_path.c.at(j) - frenet_path.c.at(j-1)) << std::endl;
+            // << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
             break;
           }
         }
@@ -430,13 +430,13 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
   for (int i = 0; i < collision_checks.size(); i++)
   {
-    if (collision_checks.at(i).get() == false)
+    if (collision_checks[i].get() == false)
     {
-      unsafe_paths.push_back(passed_constraints_paths.at(i));
+      unsafe_paths.push_back(passed_constraints_paths[i]);
     }
     else
     {
-      safe_paths.push_back(passed_constraints_paths.at(i));
+      safe_paths.push_back(passed_constraints_paths[i]);
     }
   }
   //! If there is no available path from passed_constraints_paths, check backup_paths.
@@ -454,13 +454,13 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
     for (int i = 0; i < backup_collision_checks.size(); i++)
     {
-      if (backup_collision_checks.at(i).get() == false)
+      if (backup_collision_checks[i].get() == false)
       {
-        backup_unsafe_paths.push_back(backup_paths.at(i));
+        backup_unsafe_paths.push_back(backup_paths[i]);
       }
       else
       {
-        safe_paths.push_back(backup_paths.at(i));
+        safe_paths.push_back(backup_paths[i]);
       }
     }
   }
@@ -476,28 +476,28 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
   for (int i = 0; i < soft_margin_collision_checks.size(); i++)
   {
-    if (soft_margin_collision_checks.at(i).get() == false)
+    if (soft_margin_collision_checks[i].get() == false)
     {
-      safe_paths.at(i).cf += settings_.k_obstacle * 100;  // hard code cost, obstacle top priority
+      safe_paths[i].cf += settings_.k_obstacle * 100;  // hard code cost, obstacle top priority
 
       if (using_backup_paths)
       {
-        backup_close_proximity_paths.push_back(safe_paths.at(i));
+        backup_close_proximity_paths.push_back(safe_paths[i]);
       }
       else
       {
-        close_proximity_paths.push_back(safe_paths.at(i));
+        close_proximity_paths.push_back(safe_paths[i]);
       }
     }
     else
     {
       if (using_backup_paths)
       {
-        backup_safest_paths.push_back(safe_paths.at(i));
+        backup_safest_paths.push_back(safe_paths[i]);
       }
       else
       {
-        safest_paths.push_back(safe_paths.at(i));
+        safest_paths.push_back(safe_paths[i]);
       }
     }
   }
@@ -545,13 +545,13 @@ fop::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(
     int best_path_id = 0;
     for (int i = 0; i < frenet_paths_list.size(); i++)
     {
-      if (frenet_paths_list.at(i).lane_id == target_lane_id)
+      if (frenet_paths_list[i].lane_id == target_lane_id)
       {
         found_path_in_target_lane = true;
 
-        if (min_cost >= frenet_paths_list.at(i).cf)
+        if (min_cost >= frenet_paths_list[i].cf)
         {
-          min_cost = frenet_paths_list.at(i).cf;
+          min_cost = frenet_paths_list[i].cf;
           best_path_id = i;
         }
       }

@@ -118,7 +118,7 @@ public:
 
   /* Public Functions */
   // Generate reference curve as the frenet s coordinate
-  ResultType generateReferenceCurve(const fop::Map& map);
+  ResultType generateReferenceCurve(const fop::Lane& lane);
 
   // Plan for the optimal trajectory
   std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline,

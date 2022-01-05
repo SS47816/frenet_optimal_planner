@@ -166,8 +166,8 @@ private:
   SATCollisionChecker sat_collision_checker_instance;
 
   // Maps and Paths
-  fop::Map map_;           // Maps (All the waypoints)
-  fop::Map local_map_;     // Selected Waypoints
+  fop::Lane lane_;           // Maps (All the waypoints)
+  fop::Lane local_lane_;     // Selected Waypoints
   fop::Path ref_spline_;   // Reference Spline
   fop::Path output_path_;  // Output Path
 
@@ -186,7 +186,7 @@ private:
 
   double current_steering_angle_;
 
-  double behaviour_min_speed;
+  double behaviour_min_speed_ = 7.0;
 
   // subscriber and publishers
   ros::Subscriber odom_sub;
@@ -224,7 +224,8 @@ private:
   // Functions for subscribing
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void objectCallback(const autoware_msgs::DetectedObjectArray& input_obstacles);
-  void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
+  // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
+  void laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info);
   void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
   void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
   void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
@@ -260,8 +261,8 @@ private:
   // Stanley Steeing Functions
   double calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
-  autoware_msgs::DetectedObject transformObjectFrame(autoware_msgs::DetectedObject object_input,
-                                                     geometry_msgs::TransformStamped transform_stamped);
+  // autoware_msgs::DetectedObject transformObjectFrame(autoware_msgs::DetectedObject object_input,
+  //                                                    geometry_msgs::TransformStamped transform_stamped);
 };
 
 // Constructor
@@ -364,15 +365,15 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
     return;
   }
   // Print Waypoints
-  // for (int i = 0; i < local_map_.x.size(); i++)
+  // for (int i = 0; i < local_lane_.x.size(); i++)
   // {
-  // 	std::cout << "waypoint no." << i << ": " << local_map_.x.at(i) << " " << local_map_.y.at(i) << std::endl;
+  // 	std::cout << "waypoint no." << i << ": " << local_lane_.x.at(i) << " " << local_lane_.y.at(i) << std::endl;
   // }
 
   // Update start state
   updateStartState();
   // Get the reference lane's centerline as a spline
-  FrenetOptimalTrajectoryPlanner::ResultType result = frenet_planner_instance.generateReferenceCurve(local_map_);
+  FrenetOptimalTrajectoryPlanner::ResultType result = frenet_planner_instance.generateReferenceCurve(local_lane_);
   // Store the results into reference spline
   ref_spline_.x = result.rx;
   ref_spline_.y = result.ry;
@@ -390,8 +391,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   target_lane_ = 0;  //! Sample both lanes
 
   // Define ROI width for path sampling
-  roi_boundaries_ =
-      getSamplingWidthFromTargetLane(target_lane_, SETTINGS.vehicle_width, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
+  roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_, SETTINGS.vehicle_width, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result (best path of each of the 3 regions, 0 = vehicle transition zone (buggy width), 1 =
   // remaining of left lane, 2 = remaining of right lane
@@ -400,7 +400,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 
   std::vector<fop::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
       result.cubic_spline, start_state_, final_offset, roi_boundaries_.at(0), roi_boundaries_.at(1),
-      obstacles, behaviour_min_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
+      obstacles, behaviour_min_speed_, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the 3 candidates from frenetOptimalPlanning, but still using same cost functions. Behaviour
   // can use this 3 options too choose [NOT IMPLEMENTED 20191213]
@@ -455,7 +455,7 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   geometry_msgs::TransformStamped transform_stamped;
   try
   {
-    transform_stamped = tf_buffer.lookupTransform("map", "odom", ros::Time(0));
+    transform_stamped = tf_buffer.lookupTransform("map", "base_link", ros::Time(0));
   }
   catch (tf2::TransformException& ex)
   {
@@ -486,67 +486,70 @@ void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjec
 {
   obstacles.objects.clear();
 
-  geometry_msgs::TransformStamped transform_stamped;
-
-  try
-  {
-    transform_stamped = tf_buffer.lookupTransform("map", "velodyne", ros::Time(0));
-  }
-  catch (tf2::TransformException& ex)
-  {
-    ROS_WARN("%s", ex.what());
-    return;
-  }
-
-  for (auto const& object : input_obstacles.objects)
-  {
-    autoware_msgs::DetectedObject new_object;
-    new_object = object;
-    new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
-    obstacles.objects.push_back(transformObjectFrame(new_object, transform_stamped));
-  }
+  // geometry_msgs::TransformStamped transform_stamped;
+  // try
+  // {
+  //   transform_stamped = tf_buffer.lookupTransform("map", "velodyne", ros::Time(0));
+  // }
+  // catch (tf2::TransformException& ex)
+  // {
+  //   ROS_WARN("%s", ex.what());
+  //   return;
+  // }
 
   obstacles.header = input_obstacles.header;
-  obstacles.header.frame_id = "map";
-}
-
-autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(autoware_msgs::DetectedObject object_input,
-                                                                     geometry_msgs::TransformStamped transform_stamped)
-{
-  autoware_msgs::DetectedObject transformed_object;
-  geometry_msgs::Polygon transformed_polygon;
-
-  for (auto const& point : object_input.convex_hull.polygon.points)
+  // obstacles.header.frame_id = "map";
+  for (auto const& object : input_obstacles.objects)
   {
-    geometry_msgs::Vector3 coord_before_transform, coord_after_transform;
-    coord_before_transform.x = point.x;
-    coord_before_transform.y = point.y;
-    coord_before_transform.z = 0;
-
-    // rotate the object
-    tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
-
-    geometry_msgs::Point32 transformed_point;
-    transformed_point.x = coord_after_transform.x;
-    transformed_point.y = coord_after_transform.y;
-
-    // translate the object
-    transformed_point.x += transform_stamped.transform.translation.x;
-    transformed_point.y += transform_stamped.transform.translation.y;
-    transformed_polygon.points.push_back(transformed_point);
+    autoware_msgs::DetectedObject new_object = object;
+    new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
+    // obstacles.objects.push_back(transformObjectFrame(new_object, transform_stamped));
+    obstacles.objects.emplace_back(new_object);
   }
-
-  transformed_object.convex_hull.polygon = transformed_polygon;
-  transformed_object.header = object_input.header;
-  transformed_object.header.frame_id = "map";
-
-  return transformed_object;
 }
+
+// autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(autoware_msgs::DetectedObject object_input,
+//                                                                      geometry_msgs::TransformStamped transform_stamped)
+// {
+//   autoware_msgs::DetectedObject transformed_object;
+//   geometry_msgs::Polygon transformed_polygon;
+
+//   for (auto const& point : object_input.convex_hull.polygon.points)
+//   {
+//     geometry_msgs::Vector3 coord_before_transform, coord_after_transform;
+//     coord_before_transform.x = point.x;
+//     coord_before_transform.y = point.y;
+//     coord_before_transform.z = 0;
+
+//     // rotate the object
+//     tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
+
+//     geometry_msgs::Point32 transformed_point;
+//     transformed_point.x = coord_after_transform.x;
+//     transformed_point.y = coord_after_transform.y;
+
+//     // translate the object
+//     transformed_point.x += transform_stamped.transform.translation.x;
+//     transformed_point.y += transform_stamped.transform.translation.y;
+//     transformed_polygon.points.push_back(transformed_point);
+//   }
+
+//   transformed_object.convex_hull.polygon = transformed_polygon;
+//   transformed_object.header = object_input.header;
+//   transformed_object.header.frame_id = "map";
+
+//   return transformed_object;
+// }
 
 // Receive lane info from the lane publisher
-void FrenetOptimalPlannerNode::laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
+// void FrenetOptimalPlannerNode::laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
+// {
+//   lane_ = fop::Lane(lane_info);
+// }
+void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info)
 {
-  map_ = fop::Map(lane_info);
+  lane_ = fop::Lane(lane_info, 2.5, 2.5, 2.5);
+  ROS_INFO("Local Planner: Lane Info Received, with %d points", int(lane_.points.size()));
 }
 
 // Listen to control output
@@ -561,7 +564,7 @@ void FrenetOptimalPlannerNode::cmdCallback(const geometry_msgs::Twist::ConstPtr&
 
 void FrenetOptimalPlannerNode::collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg)
 {
-  behaviour_min_speed = min_speed_msg->data;
+  behaviour_min_speed_ = min_speed_msg->data;
 }
 
 void FrenetOptimalPlannerNode::currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg)
@@ -699,27 +702,23 @@ void FrenetOptimalPlannerNode::updateVehicleFrontAxleState()
 // Feed map waypoints into local map
 bool FrenetOptimalPlannerNode::feedWaypoints()
 {
-  if (map_.x.empty() || map_.y.empty())
+  if (lane_.points.empty())
   {
-    ROS_WARN("Local Planner: Waiting for Map XY ");
-    return false;
-  }
-  else if (map_.dx.empty() || map_.dy.empty())
-  {
-    ROS_WARN("Local Planner: Waiting for Map dx dy");
+    ROS_WARN("Local Planner: Waiting for Lane Points");
     return false;
   }
 
-  int start_id = fop::lastWaypoint(current_state_, map_);
+  int start_id = fop::lastWaypoint(current_state_, lane_);
 
   // if reached the end of the lane, stop
-  if (start_id >= map_.x.size() - 2)  // exclude last 2 waypoints for safety, and prevent code crashing
+  if (start_id >= lane_.points.size() - 2)  // exclude last 2 waypoints for safety, and prevent code crashing
   {
+    ROS_WARN("Local Planner: Vehicle is at waypoint no.%d, and %d waypoints in total", start_id, int(lane_.points.size()));
     return false;
   }
 
-  const double dist = fop::distance(map_.x[start_id], map_.y[start_id], current_state_.x, current_state_.y);
-  const double lane_heading = atan2(map_.dy[start_id], map_.dx[start_id]) + M_PI / 2;
+  const double dist = fop::distance(lane_.points[start_id].point.x, lane_.points[start_id].point.y, current_state_.x, current_state_.y);
+  const double lane_heading = lane_.points[start_id].point.yaw;
   const double heading_diff = fop::unifyAngleRange(current_state_.yaw - lane_heading);
 
   if (dist > DISTANCE_THRESH)
@@ -735,24 +734,26 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   else
   {
     // clear the old waypoints
-    local_map_.clear();
+    local_lane_.clear();
 
-    if (start_id > map_.x.size() - 5)
+    if (start_id > lane_.points.size() - 5)
     {
-      start_id = map_.x.size() - 5;
+      start_id = lane_.points.size() - 5;
     }
 
     for (int i = 0; i < 5; i++)
     {
       // feed the new waypoints
-      local_map_.x.push_back(map_.x[start_id + i]);
-      local_map_.y.push_back(map_.y[start_id + i]);
-      local_map_.dx.push_back(map_.dx[start_id + i]);
-      local_map_.dy.push_back(map_.dy[start_id + i]);
-      // local_map_.s.push_back(map_.s[start_id + i]);
-      // local_map_.left_widths.push_back(map_.left_width[start_id + i]);
-      // local_map_.right_widths.push_back(map_.right_width[start_id + i]);
-      // local_map_.far_right_widths.push_back(map_.far_right_width[start_id + i]);
+      local_lane_.points.push_back(lane_.points[start_id + i]);
+
+      // local_lane_.x.push_back(lane_.x[start_id + i]);
+      // local_lane_.y.push_back(lane_.y[start_id + i]);
+      // local_lane_.dx.push_back(lane_.dx[start_id + i]);
+      // local_lane_.dy.push_back(lane_.dy[start_id + i]);
+      // local_lane_.s.push_back(lane_.s[start_id + i]);
+      // local_lane_.left_widths.push_back(lane_.left_width[start_id + i]);
+      // local_lane_.right_widths.push_back(lane_.right_width[start_id + i]);
+      // local_lane_.far_right_widths.push_back(lane_.far_right_width[start_id + i]);
 
       // std::cout << "waypoint no:" << start_id + i << std::endl;
     }
@@ -764,7 +765,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
 // Update the vehicle start state in frenet
 void FrenetOptimalPlannerNode::updateStartState()
 {
-  if (!local_map_.x.empty())
+  if (!local_lane_.points.empty())
   {
     // The new starting state
     // fop::FrenetState new_state;
@@ -779,9 +780,9 @@ void FrenetOptimalPlannerNode::updateStartState()
     if (regenerate_flag_)
     {
       ROS_INFO("Local Planner: Regenerating The Entire Path...");
-      // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_map_, but
+      // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_lane_, but
       // at fringe cases, such as start of code, ref spline might not be available
-      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(current_state_, local_map_) :
+      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(current_state_, local_lane_) :
                                                fop::getFrenet(current_state_, ref_spline_);
 
       // Clear the last output path
@@ -801,7 +802,7 @@ void FrenetOptimalPlannerNode::updateStartState()
       fop::VehicleState last_state = fop::VehicleState(output_path_.x.back(), output_path_.y.back(),
                                                                        output_path_.yaw.back(), output_path_last_speed);
 
-      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(last_state, local_map_) :
+      start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(last_state, local_lane_) :
                                                fop::getFrenet(last_state, ref_spline_);
     }
 
