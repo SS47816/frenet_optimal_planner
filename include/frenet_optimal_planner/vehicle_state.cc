@@ -10,18 +10,10 @@
 namespace fop
 {
 
-VehicleState::VehicleState(const double x, const double y, const double yaw, const double speed)
-{
-  this->x = x;
-  this->y = y;
-  this->yaw = yaw;
-  this->v = speed;
-}
+VehicleState::VehicleState(const float x, const float y, const float yaw, const float speed)
+  : x(x), y(y), yaw(yaw), v(0) {};
 
-ActuatorState::ActuatorState(const double steering_angle, const double acceleration)
-{
-  this->delta = steering_angle;
-  this->a = acceleration;
-}
+ActuatorState::ActuatorState(const float steering_angle, const float acceleration)
+  : delta(steering_angle), a(acceleration) {};
 
 }  // namespace fop

@@ -15,32 +15,30 @@ namespace fop
 {
 
 
-class VehicleState
+struct VehicleState
 {
  public:
-  // Constructors
-  VehicleState(){};
-  VehicleState(const double x, const double y, const double yaw, const double speed);
-  // Destructor
-  virtual ~VehicleState(){};
+  float x;
+  float y;
+  float yaw;  // yaw
+  float v;    // velocity
 
-  double x;
-  double y;
-  double yaw;  // yaw
-  double v;    // velocity
+  // Constructors
+  VehicleState() {};
+  VehicleState(const float x, const float y, const float yaw, const float speed)
+    : x(x), y(y), yaw(yaw), v(0) {};
 };
 
-class ActuatorState
+struct ActuatorState
 {
  public:
-  // Constructors
-  ActuatorState(){};
-  ActuatorState(const double steering_angle, const double acceleration);
-  // Destructor
-  virtual ~ActuatorState(){};
+  float delta;  // steering angle
+  float a;      // acceleration
 
-  double delta;  // steering angle
-  double a;      // acceleration
+  // Constructors
+  ActuatorState() {};
+  ActuatorState(const float steering_angle, const float acceleration)
+    : delta(steering_angle), a(acceleration) {};
 };
 
 }  // namespace fop
