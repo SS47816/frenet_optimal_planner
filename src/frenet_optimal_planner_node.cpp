@@ -188,8 +188,6 @@ private:
 
   double behaviour_min_speed;
 
-  bool narrow_path_flag;
-
   // subscriber and publishers
   ros::Subscriber odom_sub;
   ros::Subscriber lane_info_sub;
@@ -397,15 +395,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 
   // Get the planning result (best path of each of the 3 regions, 0 = vehicle transition zone (buggy width), 1 =
   // remaining of left lane, 2 = remaining of right lane
-  double final_offset;
-  if(narrow_path_flag)
-  {
-    final_offset = NARROW_PATH_OFFSET;
-  }
-  else
-  {
-    final_offset = SETTINGS.centre_offset;
-  }
+  double final_offset = SETTINGS.centre_offset;
   ROS_DEBUG("final_offset value : %f", final_offset);
 
   std::vector<fop::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
@@ -519,21 +509,6 @@ void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjec
   obstacles.header = input_obstacles.header;
   obstacles.header.frame_id = "map";
 }
-
-// void FrenetOptimalPlannerNode::specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg)
-// {
-//   for (auto& waypoint : special_waypoint_msg.waypoints)
-//   {
-//     if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_START)
-//     {
-//       narrow_path_flag = true;
-//     }
-//     else if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_END)
-//     {
-//       narrow_path_flag = false;
-//     }
-//   }
-// }
 
 autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(autoware_msgs::DetectedObject object_input,
                                                                      geometry_msgs::TransformStamped transform_stamped)
