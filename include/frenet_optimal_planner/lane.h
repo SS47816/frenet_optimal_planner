@@ -18,14 +18,22 @@
 namespace fop
 {
 
-enum class WaypointType
+// enum class WaypointType
+// {
+//   NORMAL,
+//   PATH_END,
+//   TURN,
+//   SLOPE,
+//   OFFSET_START,
+//   OFFSET_END
+// };
+
+// Class for lane id
+enum LaneID
 {
-  NORMAL,
-  PATH_END,
-  TURN,
-  SLOPE,
-  OFFSET_START,
-  OFFSET_END
+  BOTH_LANES,
+  LEFT_LANE,
+  RIGHT_LANE
 };
   
 class Map

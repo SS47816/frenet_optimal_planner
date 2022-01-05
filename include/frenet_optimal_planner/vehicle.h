@@ -2,6 +2,7 @@
 #define VEHICLE_H_
 
 #include "math_utils.h"
+#include "Eigen/Core"
 
 namespace fop
 {
@@ -13,7 +14,12 @@ enum LINK_TYPE
 
 class Vehicle
 {
-public:
+ public:
+  // double max_speed, max_acceleration, max_deceleration;
+  // double max_steering_angle, max_curvature, steering_angle_rate;
+  // double L, Lf, Lr;  // distance between front and rear axles, distance from CoG to front/rear axle
+  // Eigen::Vector2f min_point, max_point;
+
   static double length();
   static double width();
   static double L();
@@ -27,7 +33,6 @@ public:
   static double max_curvature();
   static double steering_angle_rate();
 
-private:
 };
 
 }  // namespace fop

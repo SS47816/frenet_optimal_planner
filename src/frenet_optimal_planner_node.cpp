@@ -96,14 +96,6 @@ double NARROW_PATH_OFFSET = -0.3;
 
 double REGENERATE_BRAKE_THRESHOLD = 0.3;
 
-// Class for lane id (Not used curently)
-enum LaneID
-{
-  BOTH_LANES,
-  LEFT_LANE,
-  RIGHT_LANE
-};
-
 // Dynamic parameter server callback function
 void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
 {
@@ -206,7 +198,7 @@ private:
   ros::Subscriber obstacles_sub;
   ros::Subscriber behaviour_min_speed_sub;
   ros::Subscriber current_steering_angle_sub;
-  ros::Subscriber special_waypoint_sub;
+  // ros::Subscriber special_waypoint_sub;
 
   ros::Publisher output_path_pub;
   ros::Publisher next_path_pub;
@@ -238,7 +230,7 @@ private:
   void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
   void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
   void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
-  void specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg);
+  // void specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg);
 
   // Functions fo publishing results
   void publishRefSpline(const fop::Path& path);
@@ -297,7 +289,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   std::string ref_path_topic_;
   std::string steering_angle_topic_;
   std::string turn_signal_topic_;
-  std::string special_waypoint_topic_;
+  // std::string special_waypoint_topic_;
 
   std::string objects_topic;
 
@@ -323,7 +315,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("steering_angle_topic", steering_angle_topic_));
   ROS_ASSERT(private_nh.getParam("turn_signal_topic", turn_signal_topic_));
   ROS_ASSERT(private_nh.getParam("planner_target_speed_topic", planner_target_speed_topic_));
-  ROS_ASSERT(private_nh.getParam("special_waypoint_topic", special_waypoint_topic_));
+  // ROS_ASSERT(private_nh.getParam("special_waypoint_topic", special_waypoint_topic_));
 
   // Hyperparameters
   ROS_ASSERT(private_nh.getParam("planning_frequency", planning_frequency_));
@@ -342,7 +334,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   behaviour_min_speed_sub = nh.subscribe(beahviour_min_speed_topic_, 1, &FrenetOptimalPlannerNode::collisionSpeedCallback, this);
   current_steering_angle_sub =
       nh.subscribe(current_steering_angle_topic_, 1, &FrenetOptimalPlannerNode::currSteeringAngleCallback, this);
-  special_waypoint_sub = nh.subscribe(special_waypoint_topic_, 1, &FrenetOptimalPlannerNode::specialWaypointCallback, this);
+  // special_waypoint_sub = nh.subscribe(special_waypoint_topic_, 1, &FrenetOptimalPlannerNode::specialWaypointCallback, this);
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic_, 1);
   output_path_pub = nh.advertise<nav_msgs::Path>(output_path_topic_, 1);
   next_path_pub = nh.advertise<nav_msgs::Path>(next_path_topic_, 1);
@@ -528,20 +520,20 @@ void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjec
   obstacles.header.frame_id = "map";
 }
 
-void FrenetOptimalPlannerNode::specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg)
-{
-  for (auto& waypoint : special_waypoint_msg.waypoints)
-  {
-    if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_START)
-    {
-      narrow_path_flag = true;
-    }
-    else if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_END)
-    {
-      narrow_path_flag = false;
-    }
-  }
-}
+// void FrenetOptimalPlannerNode::specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg)
+// {
+//   for (auto& waypoint : special_waypoint_msg.waypoints)
+//   {
+//     if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_START)
+//     {
+//       narrow_path_flag = true;
+//     }
+//     else if (static_cast<WaypointType>(waypoint) == WaypointType::OFFSET_END)
+//     {
+//       narrow_path_flag = false;
+//     }
+//   }
+// }
 
 autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(autoware_msgs::DetectedObject object_input,
                                                                      geometry_msgs::TransformStamped transform_stamped)
