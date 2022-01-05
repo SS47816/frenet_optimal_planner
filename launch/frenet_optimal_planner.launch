@@ -1,18 +1,21 @@
 <?xml version="1.0"?>
 <launch>
-  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find agv)/config/rosconsole.config"/>
+  <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find agv)/config/rosconsole.config"/> -->
 
-<!-- Path planner -->
-  <node name="local_planner_node" pkg="agv" type="local_planner_node" output="screen">
+  <!-- Dynamic Reconfigure GUI -->
+  <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />
+
+  <!-- Path planner -->
+  <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
     
     <!-- Input Topic Names -->
     <param name="odom_topic"                    value="/simulator/ground_truth/odom"/>
-    <param name="objects_topic"                 value="/detection/lidar_detector/objects"/>
-    <param name="lane_info_topic"               value="/lane_publisher/lane_info"/>
+    <param name="objects_topic"                 value="/lgsvl_utils/ground_truth/objects"/>
+    <param name="lane_info_topic"               value="/planning/mission_planning/global_path"/>
     <param name="cmd_topic"                     value="/cmd_vel_out"/>
     <param name="behaviour_min_speed_topic"		  value="/behaviour_planner/min_speed"/>
     <param name="current_steering_angle_topic" 	value="/present_steering_angle"/>
-    <Param name="special_waypoint_topic"	      value="/lane_publisher/special_waypoints"/>
+    <!-- <Param name="special_waypoint_topic"	      value="/lane_publisher/special_waypoints"/> -->
 
     <!-- Output Topic Names -->
     <param name="output_path_topic"             value="local_planner/output_path"/>
