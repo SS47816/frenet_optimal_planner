@@ -56,15 +56,12 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanni
   std::cout << "Paths Converted to Global Frame: " << frenet_paths_list.size() << std::endl;
 
   // Check the constraints
-  double begin = ros::WallTime::now().toSec();
-
+  const auto begin = ros::WallTime::now().toSec();
+  std::cout << "Start to Check Paths Constraints" << std::endl;
   frenet_paths_list = checkPaths(frenet_paths_list, obstacles, path_size);
-
-  double end = ros::WallTime::now().toSec();
-
-  ROS_DEBUG("%d paths checked in %f secs, %d paths passed check", end - begin, num_paths_generated,
-            frenet_paths_list.size());
-  // std::cout << "Paths Passed Collision Check: " << frenet_paths_list.size() << std::endl;
+  const auto end = ros::WallTime::now().toSec();
+  std::cout << num_paths_generated << " Paths Passed Collision Check in " << (end - begin) << "secs, "
+            << frenet_paths_list.size() << " paths passed check" << frenet_paths_list.size() << std::endl;
 
   // Find the path with minimum costs
   std::vector<fop::FrenetPath> best_path_list = findBestPaths(frenet_paths_list);
@@ -92,7 +89,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
   }
 
   // for (double goal_d = right_bound; goal_d <= left_bound; goal_d += settings_.delta_width)
-  for (double goal_d : goal_ds)
+  for (auto goal_d : goal_ds)
   {
     // generate d_t polynomials
     int t_count = 0;
@@ -281,7 +278,7 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
                                                         const autoware_msgs::DetectedObjectArray& obstacles,
                                                         const std::string& margin)
 {
-  // ROS_DEBUG("Collision checking start");
+  // ROS_INFO("Collision checking start");
 
   geometry_msgs::Polygon buggy_rect;
   // geometry_msgs::Polygon buggy_hard_margin;
@@ -308,7 +305,7 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
         buggy_center_x, buggy_center_y, frenet_path.yaw[i], settings_.vehicle_length, settings_.vehicle_width,
         settings_.soft_safety_margin);
 
-    for (auto& object : obstacles.objects)
+    for (auto const& object : obstacles.objects)
     {
       if (margin == "no")
       {
@@ -328,7 +325,7 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
   }
 
   // double end = ros::WallTime::now().toSec();
-  // ROS_DEBUG("Collision checking done in: %f secs", end - begin);
+  // ROS_INFO("Collision checking done in: %f secs", end - begin);
   // std::cout << "END COLLISION CHECK" << count << std::endl;
   return true;
 }
@@ -362,30 +359,31 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
   /* --------------------- Check paths against constraints -------------------- */
 
-  for (auto frenet_path : frenet_paths_list)
+  for (auto& frenet_path : frenet_paths_list)
   {
     bool safe = true;
-
+    bool curvature_passed = true;
     for (int j = 0; j < frenet_path.c.size(); j++)
     {
       if (frenet_path.s_d[j] > settings_.max_speed)
       {
         safe = false;
-        // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+        std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
         break;
       }
       else if (frenet_path.s_dd[j] > settings_.max_accel || frenet_path.s_dd[j] < settings_.max_decel)
       {
         safe = false;
-        // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+        std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
         break;
       }
     }
 
     if (safe)
     {
-      double max_curvature_rate = settings_.steering_angle_rate / fop::Vehicle::Lr();
-      double max_curvature_change = max_curvature_rate * settings_.tick_t - 0.0005;  //! 0.0005 is margin
+      const double max_curvature_rate = settings_.steering_angle_rate / fop::Vehicle::Lr();
+      const double max_curvature_change = 2*(max_curvature_rate * settings_.tick_t - 0.0005);  //! 0.0005 is margin
+
       //! Do curvature check only on waypoints to be put into path
       for (int j = 0; j < frenet_path.c.size(); j++)
       {
@@ -393,15 +391,16 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
         {
           if (fabs(frenet_path.c[j] - frenet_path.c[j-1]) > max_curvature_change)
           {
-            frenet_path.curvature_check = false;
-            // std::cout << "Exceeded max curvature change = " << max_curvature_change << ". Curr curvature change = "
-            // << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
+            // frenet_path.curvature_check = false;
+            std::cout << "Exceeded max curvature change = " << max_curvature_change << ". Curr curvature change = "
+            << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
             break;
           }
         }
       }
 
-      if (frenet_path.curvature_check)
+      // if (frenet_path.curvature_check)
+      if (curvature_passed)
       {
         passed_constraints_paths.push_back(frenet_path);
       }
@@ -416,13 +415,14 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       unsafe_paths.push_back(frenet_path);
     }
   }
+  std::cout << "Constraints Checked for all Paths, Starting Collision Checking..." << std::endl;
 
   /* ------------------- Check paths for collisions (Async) ------------------- */
 
   std::vector<std::future<bool>> collision_checks;
   std::vector<std::future<bool>> backup_collision_checks;
 
-  for (auto frenet_path : passed_constraints_paths)
+  for (auto const& frenet_path : passed_constraints_paths)
   {
     collision_checks.push_back(std::async(std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this,
                                           frenet_path, obstacles, "no"));
@@ -446,7 +446,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
     backup_unchecked_paths.clear();
 
     std::cout << "No paths passed curvature checks available. Checking backup paths.";
-    for (auto frenet_path : backup_paths)
+    for (auto const& frenet_path : backup_paths)
     {
       backup_collision_checks.push_back(std::async(
           std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "no"));
@@ -468,7 +468,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
   //! cost function for safe paths
   std::vector<std::future<bool>> soft_margin_collision_checks;
 
-  for (auto frenet_path : safe_paths)
+  for (auto const& frenet_path : safe_paths)
   {
     soft_margin_collision_checks.push_back(std::async(
         std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "soft"));
