@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-  <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find agv)/config/rosconsole.config"/> -->
 
   <!-- Dynamic Reconfigure GUI -->
   <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />

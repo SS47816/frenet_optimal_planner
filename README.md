@@ -8,8 +8,9 @@ Implementation of Frenet Optimal Planning Algorithm in ROS
 ## Features
 
 ## TODOs
+* **lane info**: change lane info input to standard format
 * **obstacle frame**: remove frame transform for obstacles 
-* ****
+
 ## Dependencies
 * C++11 above
 * CMake: 3.0.2 above
