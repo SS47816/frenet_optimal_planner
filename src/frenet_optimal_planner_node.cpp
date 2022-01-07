@@ -223,7 +223,7 @@ private:
 
   // Functions for subscribing
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
-  void objectCallback(const autoware_msgs::DetectedObjectArray& input_obstacles);
+  void objectCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles);
   // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info);
   void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
@@ -261,8 +261,8 @@ private:
   // Stanley Steeing Functions
   double calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
-  // autoware_msgs::DetectedObject transformObjectFrame(autoware_msgs::DetectedObject object_input,
-  //                                                    geometry_msgs::TransformStamped transform_stamped);
+  autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
+                                                    const geometry_msgs::TransformStamped& transform_stamped);
 };
 
 // Constructor
@@ -482,64 +482,64 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   updateVehicleFrontAxleState();
 }
 
-void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjectArray& input_obstacles)
+void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles)
 {
   obstacles.objects.clear();
 
-  // geometry_msgs::TransformStamped transform_stamped;
-  // try
-  // {
-  //   transform_stamped = tf_buffer.lookupTransform("map", "velodyne", ros::Time(0));
-  // }
-  // catch (tf2::TransformException& ex)
-  // {
-  //   ROS_WARN("%s", ex.what());
-  //   return;
-  // }
+  geometry_msgs::TransformStamped transform_stamped;
+  try
+  {
+    transform_stamped = tf_buffer.lookupTransform("map", input_obstacles->header.frame_id, ros::Time(0));
+  }
+  catch (tf2::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    return;
+  }
 
-  obstacles.header = input_obstacles.header;
-  // obstacles.header.frame_id = "map";
-  for (auto const& object : input_obstacles.objects)
+  obstacles.header = input_obstacles->header;
+  obstacles.header.frame_id = "map";
+  for (auto const& object : input_obstacles->objects)
   {
     autoware_msgs::DetectedObject new_object = object;
     new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
-    // obstacles.objects.push_back(transformObjectFrame(new_object, transform_stamped));
+    obstacles.objects.push_back(transformObjectFrame(new_object, transform_stamped));
     obstacles.objects.emplace_back(new_object);
   }
 }
 
-// autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(autoware_msgs::DetectedObject object_input,
-//                                                                      geometry_msgs::TransformStamped transform_stamped)
-// {
-//   autoware_msgs::DetectedObject transformed_object;
-//   geometry_msgs::Polygon transformed_polygon;
+autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
+                                                                             const geometry_msgs::TransformStamped& transform_stamped)
+{
+  autoware_msgs::DetectedObject transformed_object;
+  geometry_msgs::Polygon transformed_polygon;
 
-//   for (auto const& point : object_input.convex_hull.polygon.points)
-//   {
-//     geometry_msgs::Vector3 coord_before_transform, coord_after_transform;
-//     coord_before_transform.x = point.x;
-//     coord_before_transform.y = point.y;
-//     coord_before_transform.z = 0;
+  for (auto const& point : object_input.convex_hull.polygon.points)
+  {
+    geometry_msgs::Vector3 coord_before_transform, coord_after_transform;
+    coord_before_transform.x = point.x;
+    coord_before_transform.y = point.y;
+    coord_before_transform.z = 0;
 
-//     // rotate the object
-//     tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
+    // rotate the object
+    tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
 
-//     geometry_msgs::Point32 transformed_point;
-//     transformed_point.x = coord_after_transform.x;
-//     transformed_point.y = coord_after_transform.y;
+    geometry_msgs::Point32 transformed_point;
+    transformed_point.x = coord_after_transform.x;
+    transformed_point.y = coord_after_transform.y;
 
-//     // translate the object
-//     transformed_point.x += transform_stamped.transform.translation.x;
-//     transformed_point.y += transform_stamped.transform.translation.y;
-//     transformed_polygon.points.push_back(transformed_point);
-//   }
+    // translate the object
+    transformed_point.x += transform_stamped.transform.translation.x;
+    transformed_point.y += transform_stamped.transform.translation.y;
+    transformed_polygon.points.push_back(transformed_point);
+  }
 
-//   transformed_object.convex_hull.polygon = transformed_polygon;
-//   transformed_object.header = object_input.header;
-//   transformed_object.header.frame_id = "map";
+  transformed_object.convex_hull.polygon = transformed_polygon;
+  transformed_object.header = object_input.header;
+  transformed_object.header.frame_id = "map";
 
-//   return transformed_object;
-// }
+  return transformed_object;
+}
 
 // Receive lane info from the lane publisher
 // void FrenetOptimalPlannerNode::laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
