@@ -367,7 +367,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Print Waypoints
   // for (int i = 0; i < local_lane_.x.size(); i++)
   // {
-  // 	std::cout << "waypoint no." << i << ": " << local_lane_.x.at(i) << " " << local_lane_.y.at(i) << std::endl;
+  // 	std::cout << "waypoint no." << i << ": " << local_lane_.x[i] << " " << local_lane_.y[i] << std::endl;
   // }
 
   // Update start state
@@ -399,7 +399,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   ROS_DEBUG("final_offset value : %f", final_offset);
 
   std::vector<fop::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
-      result.cubic_spline, start_state_, final_offset, roi_boundaries_.at(0), roi_boundaries_.at(1),
+      result.cubic_spline, start_state_, final_offset, roi_boundaries_[0], roi_boundaries_[1],
       obstacles, behaviour_min_speed_, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the 3 candidates from frenetOptimalPlanning, but still using same cost functions. Behaviour
@@ -455,7 +455,7 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   geometry_msgs::TransformStamped transform_stamped;
   try
   {
-    transform_stamped = tf_buffer.lookupTransform("map", "base_link", ros::Time(0));
+    transform_stamped = tf_buffer.lookupTransform("map", "odom", ros::Time(0));
   }
   catch (tf2::TransformException& ex)
   {
@@ -546,6 +546,7 @@ void FrenetOptimalPlannerNode::objectCallback(const autoware_msgs::DetectedObjec
 // {
 //   lane_ = fop::Lane(lane_info);
 // }
+
 void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info)
 {
   lane_ = fop::Lane(lane_info, 2.5, 2.5, 2.5);
@@ -582,9 +583,9 @@ void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
-    pose.pose.position.x = path.x.at(i);
-    pose.pose.position.y = path.y.at(i);
-    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(path.yaw.at(i));
+    pose.pose.position.x = path.x[i];
+    pose.pose.position.y = path.y[i];
+    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     pose.pose.orientation = pose_quat;
     ref_path_msg.poses.emplace_back(pose);
   }
@@ -602,9 +603,9 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
-    pose.pose.position.x = path.x.at(i);
-    pose.pose.position.y = path.y.at(i);
-    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(path.yaw.at(i));
+    pose.pose.position.x = path.x[i];
+    pose.pose.position.y = path.y[i];
+    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     pose.pose.orientation = pose_quat;
 
     output_path_msg.poses.emplace_back(pose);
@@ -626,9 +627,9 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
-    pose.pose.position.x = frenet_path.x.at(i);
-    pose.pose.position.y = frenet_path.y.at(i);
-    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(frenet_path.yaw.at(i));
+    pose.pose.position.x = frenet_path.x[i];
+    pose.pose.position.y = frenet_path.y[i];
+    geometry_msgs::Quaternion pose_quat = tf::createQuaternionMsgFromYaw(frenet_path.yaw[i]);
     pose.pose.orientation = pose_quat;
 
     output_path_msg.poses.emplace_back(pose);
@@ -861,22 +862,22 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
 
   for (int i = 0; i < best_path_list.size(); i++)
   {
-    if (!best_path_list.at(i).x.empty())
+    if (!best_path_list[i].x.empty())
     {
       // keep lane option
-      if (best_path_list.at(i).lane_id == current_lane || best_path_list.at(i).lane_id == 0)
+      if (best_path_list[i].lane_id == current_lane || best_path_list[i].lane_id == 0)
       {
-        if (best_path_list.at(i).cf < keep_lane_cost)
+        if (best_path_list[i].cf < keep_lane_cost)
         {
           keep_lane_id = i;
-          keep_lane_cost = best_path_list.at(i).cf;
+          keep_lane_cost = best_path_list[i].cf;
         }
       }
       // change lane option
       else
       {
         change_lane_id = i;
-        change_lane_cost = best_path_list.at(i).cf;
+        change_lane_cost = best_path_list[i].cf;
       }
     }
   }
@@ -888,13 +889,13 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
     {
       ROS_DEBUG("Local Planner: Keeping Lane");
       change_lane_flag = false;
-      best_path = best_path_list.at(keep_lane_id);
+      best_path = best_path_list[keep_lane_id];
     }
     else
     {
       ROS_DEBUG("Local Planner: Changing Lane");
       change_lane_flag = true;
-      best_path = best_path_list.at(change_lane_id);
+      best_path = best_path_list[change_lane_id];
     }
   }
   // if only keep lane available
@@ -902,14 +903,14 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
   {
     ROS_DEBUG("Local Planner: Keeping Lane");
     change_lane_flag = false;
-    best_path = best_path_list.at(keep_lane_id);
+    best_path = best_path_list[keep_lane_id];
   }
   // if only change lane available
   else if (keep_lane_id == -1 && change_lane_id != -1)
   {
     ROS_DEBUG("Local Planner: Changing Lane");
     change_lane_flag = true;
-    best_path = best_path_list.at(change_lane_id);
+    best_path = best_path_list[change_lane_id];
   }
   // if none available
   else
@@ -942,12 +943,12 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
     if (!output_path_.x.empty())
     {
       wp_seperation =
-          fop::distance(output_path_.x.back(), output_path_.y.back(), frenet_path.x.at(i), frenet_path.y.at(i));
+          fop::distance(output_path_.x.back(), output_path_.y.back(), frenet_path.x[i], frenet_path.y[i]);
     }
     else
     {
-      wp_seperation = fop::distance(frenet_path.x.at(i), frenet_path.y.at(i), frenet_path.x.at(i + 1),
-                                            frenet_path.y.at(i + 1));
+      wp_seperation = fop::distance(frenet_path.x[i], frenet_path.y[i], frenet_path.x[i+1],
+                                            frenet_path.y[i+1]);
     }
 
     // If the separation is too big/small, reject point onward
@@ -958,9 +959,9 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
       break;
     }
 
-    output_path_.x.push_back(frenet_path.x.at(i));
-    output_path_.y.push_back(frenet_path.y.at(i));
-    output_path_.yaw.push_back(frenet_path.yaw.at(i));
+    output_path_.x.push_back(frenet_path.x[i]);
+    output_path_.y.push_back(frenet_path.y[i]);
+    output_path_.yaw.push_back(frenet_path.yaw[i]);
 
     // std::cout << "Concatenate round " << i << ": Output Path Size: " << output_path_.x.size() << std::endl;
   }
@@ -1004,11 +1005,11 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
   else
   {
     // First Term
-    const double delta_yaw = fop::unifyAngleRange(output_path_.yaw.at(wp_id) - current_state_.yaw);
+    const double delta_yaw = fop::unifyAngleRange(output_path_.yaw[wp_id] - current_state_.yaw);
 
     // Second Term
-    const double c = fop::distance(output_path_.x.at(wp_id), output_path_.y.at(wp_id),
-                                           output_path_.x.at(wp_id + 1), output_path_.y.at(wp_id + 1));
+    const double c = fop::distance(output_path_.x[wp_id], output_path_.y[wp_id],
+                                           output_path_.x[wp_id+1], output_path_.y[wp_id+1]);
     // if two waypoints overlapped, return error value
     if (c <= WP_MIN_SEP)
     {
@@ -1016,9 +1017,9 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
       return ERROR_VALUE;
     }
     const double a =
-        fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id), output_path_.y.at(wp_id));
-    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x.at(wp_id + 1),
-                                           output_path_.y.at(wp_id + 1));
+        fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id], output_path_.y[wp_id]);
+    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id+1],
+                                           output_path_.y[wp_id+1]);
     // if the vehicle is too far from the waypoint, return error value
     if (a >= WP_MAX_SEP || b >= WP_MAX_SEP)
     {
@@ -1034,8 +1035,8 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
 
     // Angle of std::vector vehicle -> waypoint
     const double vectors_angle_diff =
-        atan2(frontaxle_state.y - output_path_.y.at(wp_id), frontaxle_state.x - output_path_.x.at(wp_id)) -
-        output_path_.yaw.at(wp_id);
+        atan2(frontaxle_state.y - output_path_.y[wp_id], frontaxle_state.x - output_path_.x[wp_id]) -
+        output_path_.yaw[wp_id];
     const double vectors_angle_diff_unified = fop::unifyAngleRange(vectors_angle_diff);
     const int direction = vectors_angle_diff_unified < 0 ? 1 : -1;
 
