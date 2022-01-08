@@ -10,19 +10,25 @@
 namespace fop
 {
 
+// Return PI
 constexpr double pi() { return M_PI; }
 
+// Convert degrees to radians
 double deg2rad(const double x) { return x * pi() / 180; }
 
+// Convert radians to degrees
 double rad2deg(const double x) { return x * 180 / pi(); }
 
+// Convert metre per second to kilometers per hour
 double mpsTokph(const double x) { return x * 3.6; }
 
+// Convert kilometers per hour to meter per second
 double kphTomps(const double x) { return x / 3.6; }
 
+// Convert angle into range [-pi, +pi]
 double unifyAngleRange(const double angle)
 {
-  double new_angle = angle;
+  auto new_angle = angle;
   while (new_angle > M_PI)
   {
     new_angle -= 2 * M_PI;
@@ -34,6 +40,7 @@ double unifyAngleRange(const double angle)
   return new_angle;
 }
 
+// Limit the value within [lower_bound, upper_bound]
 double limitWithinRange(double value, const double lower_bound, const double upper_bound)
 {
   value = std::max(value, lower_bound);
@@ -41,21 +48,16 @@ double limitWithinRange(double value, const double lower_bound, const double upp
   return value;
 }
 
+// Calculate the Euclideam distance between two points
 double distance(const double x1, const double y1, const double x2, const double y2)
 {
   return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
-bool cmp_doubles_greater_or_equal(const double a, const double b)
+// Calculate the Euclideam distance between two points
+double magnitude(const double x, const double y, const double z)
 {
-  if ((a - b) >= 0.0)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  return sqrt(x*x + y*y + z*z);
 }
 
 } // end of namespace fop

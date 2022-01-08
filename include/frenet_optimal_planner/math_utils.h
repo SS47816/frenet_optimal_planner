@@ -38,8 +38,8 @@ double limitWithinRange(double value, const double lower_bound, const double upp
 // Calculate the Euclideam distance between two points
 double distance(const double x1, const double y1, const double x2, const double y2);
 
-// Return true if a is greater or equal to b
-bool cmp_doubles_greater_or_equal(const double a, const double b);
+// Calculate the magnitude of a vector 
+double magnitude(const double x, const double y, const double z);
 
 } // end of namespace fop
 

@@ -15,6 +15,7 @@
 #include <ros/console.h>
 
 #include <tf/tf.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <std_msgs/Int16.h>
@@ -252,17 +253,15 @@ private:
   std::vector<double> getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width,
                                                      const double left_lane_width, const double right_lane_width);
 
-  fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list,
-                                     const int current_lane);
+  fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list, const int current_lane);
 
-  void concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation,
-                  const double wp_min_seperation);
+  void concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation, const double wp_min_seperation);
 
   // Stanley Steeing Functions
   double calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
   autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
-                                                    const geometry_msgs::TransformStamped& transform_stamped);
+                                                     const geometry_msgs::TransformStamped& transform_stamped);
 };
 
 // Constructor
@@ -450,12 +449,12 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 // Update vehicle current state from the tf transform
 void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
 {
-  current_state_.v = odom_msg->twist.twist.linear.x;
+  current_state_.v = magnitude(odom_msg->twist.twist.linear.x, odom_msg->twist.twist.linear.y, odom_msg->twist.twist.linear.z);
 
   geometry_msgs::TransformStamped transform_stamped;
   try
   {
-    transform_stamped = tf_buffer.lookupTransform("map", "odom", ros::Time(0));
+    transform_stamped = tf_buffer.lookupTransform("map", odom_msg->header.frame_id, ros::Time(0));
   }
   catch (tf2::TransformException& ex)
   {
@@ -463,21 +462,18 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
     return;
   }
 
-  geometry_msgs::PoseStamped pose_before_transform, pose_after_transform;
-  pose_before_transform.header.frame_id = odom_msg->header.frame_id;
-  pose_before_transform.header.stamp = odom_msg->header.stamp;
-  pose_before_transform.pose = odom_msg->pose.pose;
-  tf2::doTransform(pose_before_transform, pose_after_transform, transform_stamped);
+  geometry_msgs::Pose pose_in_map;
+  tf2::doTransform(odom_msg->pose.pose, pose_in_map, transform_stamped);
+  // Current XY of robot (map frame)
+  current_state_.x = pose_in_map.position.x;
+  current_state_.y = pose_in_map.position.y;
 
-  tf::Quaternion q(pose_after_transform.pose.orientation.x, pose_after_transform.pose.orientation.y,
-                   pose_after_transform.pose.orientation.z, pose_after_transform.pose.orientation.w);
-  tf::Matrix3x3 m(q);
+  tf2::Quaternion q_tf2(pose_in_map.orientation.x, pose_in_map.orientation.y,
+                        pose_in_map.orientation.z, pose_in_map.orientation.w);
+  q_tf2.normalize();
+  tf2::Matrix3x3 m(q_tf2);
   double roll, pitch;
   m.getRPY(roll, pitch, current_state_.yaw);
-
-  // Current XY of robot (map frame)
-  current_state_.x = pose_after_transform.pose.position.x;
-  current_state_.y = pose_after_transform.pose.position.y;
 
   updateVehicleFrontAxleState();
 }
