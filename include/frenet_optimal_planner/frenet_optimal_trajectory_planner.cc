@@ -419,18 +419,21 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
   /* ------------------- Check paths for collisions (Async) ------------------- */
 
-  std::vector<std::future<bool>> collision_checks;
-  std::vector<std::future<bool>> backup_collision_checks;
+  // std::vector<std::future<bool>> collision_checks;
+  // std::vector<std::future<bool>> backup_collision_checks;
 
-  for (auto const& frenet_path : passed_constraints_paths)
-  {
-    collision_checks.push_back(std::async(std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this,
-                                          frenet_path, obstacles, "no"));
-  }
+  // for (auto const& frenet_path : passed_constraints_paths)
+  // {
+  //   collision_checks.push_back(std::async(std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this,
+  //                                         frenet_path, obstacles, "no"));
+  // }
+  // std::cout << "Async Collision Checking Done!" << std::endl;
 
+  std::vector<bool> collision_checks(passed_constraints_paths.size(), bool{true});
   for (int i = 0; i < collision_checks.size(); i++)
   {
-    if (collision_checks[i].get() == false)
+    // if (collision_checks[i].get() == false)
+    if (collision_checks[i] == false)
     {
       unsafe_paths.push_back(passed_constraints_paths[i]);
     }
@@ -439,68 +442,71 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       safe_paths.push_back(passed_constraints_paths[i]);
     }
   }
+
+  std::cout << "Fake Collision Checking Done!" << std::endl;
+
   //! If there is no available path from passed_constraints_paths, check backup_paths.
-  if (safe_paths.empty())
-  {
-    using_backup_paths = true;
-    backup_unchecked_paths.clear();
+  // if (safe_paths.empty())
+  // {
+  //   using_backup_paths = true;
+  //   backup_unchecked_paths.clear();
 
-    std::cout << "No paths passed curvature checks available. Checking backup paths.";
-    for (auto const& frenet_path : backup_paths)
-    {
-      backup_collision_checks.push_back(std::async(
-          std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "no"));
-    }
+  //   std::cout << "No paths passed curvature checks available. Checking backup paths.";
+  //   for (auto const& frenet_path : backup_paths)
+  //   {
+  //     backup_collision_checks.push_back(std::async(
+  //         std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "no"));
+  //   }
 
-    for (int i = 0; i < backup_collision_checks.size(); i++)
-    {
-      if (backup_collision_checks[i].get() == false)
-      {
-        backup_unsafe_paths.push_back(backup_paths[i]);
-      }
-      else
-      {
-        safe_paths.push_back(backup_paths[i]);
-      }
-    }
-  }
+  //   for (int i = 0; i < backup_collision_checks.size(); i++)
+  //   {
+  //     if (backup_collision_checks[i].get() == false)
+  //     {
+  //       backup_unsafe_paths.push_back(backup_paths[i]);
+  //     }
+  //     else
+  //     {
+  //       safe_paths.push_back(backup_paths[i]);
+  //     }
+  //   }
+  // }
 
   //! cost function for safe paths
-  std::vector<std::future<bool>> soft_margin_collision_checks;
+  // std::vector<std::future<bool>> soft_margin_collision_checks;
 
-  for (auto const& frenet_path : safe_paths)
-  {
-    soft_margin_collision_checks.push_back(std::async(
-        std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "soft"));
-  }
+  // for (auto const& frenet_path : safe_paths)
+  // {
+  //   soft_margin_collision_checks.push_back(std::async(
+  //       std::launch::async, &FrenetOptimalTrajectoryPlanner::checkPathCollision, this, frenet_path, obstacles, "soft"));
+  // }
 
-  for (int i = 0; i < soft_margin_collision_checks.size(); i++)
-  {
-    if (soft_margin_collision_checks[i].get() == false)
-    {
-      safe_paths[i].cf += settings_.k_obstacle * 100;  // hard code cost, obstacle top priority
+  // for (int i = 0; i < soft_margin_collision_checks.size(); i++)
+  // {
+  //   if (soft_margin_collision_checks[i].get() == false)
+  //   {
+  //     safe_paths[i].cf += settings_.k_obstacle * 100;  // hard code cost, obstacle top priority
 
-      if (using_backup_paths)
-      {
-        backup_close_proximity_paths.push_back(safe_paths[i]);
-      }
-      else
-      {
-        close_proximity_paths.push_back(safe_paths[i]);
-      }
-    }
-    else
-    {
-      if (using_backup_paths)
-      {
-        backup_safest_paths.push_back(safe_paths[i]);
-      }
-      else
-      {
-        safest_paths.push_back(safe_paths[i]);
-      }
-    }
-  }
+  //     if (using_backup_paths)
+  //     {
+  //       backup_close_proximity_paths.push_back(safe_paths[i]);
+  //     }
+  //     else
+  //     {
+  //       close_proximity_paths.push_back(safe_paths[i]);
+  //     }
+  //   }
+  //   else
+  //   {
+  //     if (using_backup_paths)
+  //     {
+  //       backup_safest_paths.push_back(safe_paths[i]);
+  //     }
+  //     else
+  //     {
+  //       safest_paths.push_back(safe_paths[i]);
+  //     }
+  //   }
+  // }
   /* ------------------------------ Done checking ----------------------------- */
 
   if (safe_paths.size() > 0)
