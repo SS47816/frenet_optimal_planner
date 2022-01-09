@@ -16,8 +16,7 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTraj
   this->settings_ = settings;
 }
 
-FrenetOptimalTrajectoryPlanner::ResultType
-FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
+FrenetOptimalTrajectoryPlanner::ResultType FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
 {
   FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
   result.cubic_spline = fop::Spline2D(lane);

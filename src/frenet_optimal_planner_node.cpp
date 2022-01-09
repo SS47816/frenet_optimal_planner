@@ -333,8 +333,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   cmd_sub = nh.subscribe(cmd_topic_, 1, &FrenetOptimalPlannerNode::cmdCallback, this);
   obstacles_sub = nh.subscribe(objects_topic, 1, &FrenetOptimalPlannerNode::objectCallback, this);
   behaviour_min_speed_sub = nh.subscribe(beahviour_min_speed_topic_, 1, &FrenetOptimalPlannerNode::collisionSpeedCallback, this);
-  current_steering_angle_sub =
-      nh.subscribe(current_steering_angle_topic_, 1, &FrenetOptimalPlannerNode::currSteeringAngleCallback, this);
+  current_steering_angle_sub = nh.subscribe(current_steering_angle_topic_, 1, &FrenetOptimalPlannerNode::currSteeringAngleCallback, this);
   // special_waypoint_sub = nh.subscribe(special_waypoint_topic_, 1, &FrenetOptimalPlannerNode::specialWaypointCallback, this);
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic_, 1);
   output_path_pub = nh.advertise<nav_msgs::Path>(output_path_topic_, 1);
@@ -596,7 +595,15 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
     pose.header = output_path_msg.header;
     pose.pose.position.x = path.x[i];
     pose.pose.position.y = path.y[i];
-    pose.pose.position.z = 0.0;
+    if (std::isnan(path.x[i]) || std::isnan(path.y[i]))
+    {
+      ROS_WARN("Nan value in output path point no.%d", int(i));
+    }
+    else if (std::isinf(path.x[i]) || std::isinf(path.y[i]))
+    {
+      ROS_WARN("Inf value in output path point no.%d", int(i));
+    }
+    pose.pose.position.z = 1.0;
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
@@ -620,7 +627,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
     pose.header = output_path_msg.header;
     pose.pose.position.x = frenet_path.x[i];
     pose.pose.position.y = frenet_path.y[i];
-    pose.pose.position.z = 0.0;
+    pose.pose.position.z = 1.0;
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(frenet_path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
