@@ -20,10 +20,10 @@ double deg2rad(const double x) { return x * pi() / 180; }
 double rad2deg(const double x) { return x * 180 / pi(); }
 
 // Convert metre per second to kilometers per hour
-double mpsTokph(const double x) { return x * 3.6; }
+double mps2kph(const double x) { return x * 3.6; }
 
 // Convert kilometers per hour to meter per second
-double kphTomps(const double x) { return x / 3.6; }
+double kph2mps(const double x) { return x / 3.6; }
 
 // Convert angle into range [-pi, +pi]
 double unifyAngleRange(const double angle)

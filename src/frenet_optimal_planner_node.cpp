@@ -575,7 +575,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
     pose.header = ref_path_msg.header;
     pose.pose.position.x = path.x[i];
     pose.pose.position.y = path.y[i];
-    pose.pose.position.z = 1.0;
+    pose.pose.position.z = 0.0;
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     ref_path_msg.poses.emplace_back(pose);
   }
@@ -596,7 +596,7 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
     pose.header = output_path_msg.header;
     pose.pose.position.x = path.x[i];
     pose.pose.position.y = path.y[i];
-    pose.pose.position.z = 2.0;
+    pose.pose.position.z = 0.0;
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
@@ -620,7 +620,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
     pose.header = output_path_msg.header;
     pose.pose.position.x = frenet_path.x[i];
     pose.pose.position.y = frenet_path.y[i];
-    pose.pose.position.z = 2.0;
+    pose.pose.position.z = 0.0;
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(frenet_path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
@@ -730,6 +730,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   // clear the old waypoints
   local_lane_.clear(); 
 
+  // Make sure there are at least 5 points in the remaining section of the global reference path
   if (start_id > lane_.points.size() - 5)
   {
     start_id = lane_.points.size() - 5;
@@ -745,7 +746,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   // Check if the global waypoints need to be filtered
   if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= REF_SPLINE_LENGTH)
   {
-    // Filter the waypoints 
+    // Filter the waypoints to a uniform density
     double s_current = lane_.points[start_id].point.s;
     local_lane_.points.push_back(lane_.points[start_id]);
     for (size_t i = start_id + 1; i < lane_.points.size(); i++)
@@ -769,16 +770,17 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     if ((lane_.points.size() - start_id) >= 5)
     {
       const int first_id = start_id;                            // 0
-      const int third_id = (lane_.points.size() - first_id)/2;  // 2
-      const int last_id = lane_.points.size() - 1;              // 4
+      const int fifth_id = lane_.points.size() - 1;             // 4
+      const int third_id = (lane_.points.size() + first_id)/2;  // 2
+      
       const int second_id = (first_id + third_id)/2;            // 1
-      const int fourth_id = (third_id + last_id)/2;             // 3
+      const int fourth_id = (third_id + fifth_id)/2;            // 3
 
       local_lane_.points.push_back(lane_.points[first_id]);
       local_lane_.points.push_back(lane_.points[second_id]);
       local_lane_.points.push_back(lane_.points[third_id]);
       local_lane_.points.push_back(lane_.points[fourth_id]);
-      local_lane_.points.push_back(lane_.points[last_id]);
+      local_lane_.points.push_back(lane_.points[fifth_id]);
     }
     else
     {
