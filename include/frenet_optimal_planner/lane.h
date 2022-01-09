@@ -41,12 +41,14 @@ enum LaneID
 struct Waypoint
 {
  public:
-  double x, y, yaw;
+  double x, y, yaw, s;
   
   Waypoint();
   Waypoint(const double x, const double y, const double yaw);
+  Waypoint(const double x, const double y, const double yaw, const double s);
   Waypoint(const tf::Pose& pose);
   Waypoint(const geometry_msgs::Pose& pose_msg);
+  Waypoint(const geometry_msgs::Pose& pose_msg, const double s);
 };
 
 struct LanePoint
@@ -58,7 +60,7 @@ struct LanePoint
   
   LanePoint();
   LanePoint(const Waypoint& point, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
-  LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
+  LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width, const double s);
 };
   
 class Lane
@@ -67,9 +69,9 @@ class Lane
   // constructors
   Lane(){};
   // Lane(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
-  Lane(const nav_msgs::Path::ConstPtr& ref_path, const double lane_width, const double left_lane_width, const double right_lane_width);
+  Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   // Destructor
-  virtual ~Lane(){};
+  virtual ~Lane() {};
 
   std::vector<LanePoint> points;
   // std::vector<double> x;

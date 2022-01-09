@@ -85,15 +85,17 @@ const double ERROR_VALUE = std::numeric_limits<double>::lowest(); // Error value
 // Hyperparameters for output path
 double OUTPUT_PATH_MAX_SIZE;  // Maximum size of the output path
 double OUTPUT_PATH_MIN_SIZE;  // Minimum size of the output path
+double REF_SPLINE_LENGTH;
 // Stanley gains
 double STANLEY_OVERALL_GAIN;  // Stanley overall gain
 double TRACK_ERROR_GAIN;      // Cross track error gain
 // Turn signal thresholds
-double TURN_YAW_THRESH;  // Yaw difference threshold
+double TURN_YAW_THRESH;       // Yaw difference threshold
 // Safety margins for collision check
-double LEFT_LANE_WIDTH;   // Maximum left road width [m]
-double RIGHT_LANE_WIDTH;  // Maximum right road width [m]
-double NARROW_PATH_OFFSET = -0.3;
+double LANE_WIDTH;
+double LEFT_LANE_WIDTH;       // Maximum left road width [m]
+double RIGHT_LANE_WIDTH;      // Maximum right road width [m]
+// double NARROW_PATH_OFFSET = -0.3;
 
 double REGENERATE_BRAKE_THRESHOLD = 0.3;
 
@@ -103,6 +105,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // Hyperparameters for output path
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
+  REF_SPLINE_LENGTH = config.ref_spline_length;
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::width();
   SETTINGS.vehicle_length = fop::Vehicle::length();
@@ -111,6 +114,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   STANLEY_OVERALL_GAIN = config.stanley_overall_gain;
   TRACK_ERROR_GAIN = config.track_error_gain;
   // Sampling parameters (lateral)
+  LANE_WIDTH = config.curr_lane_width;
   LEFT_LANE_WIDTH = config.left_lane_width;
   RIGHT_LANE_WIDTH = config.right_lane_width;
   SETTINGS.centre_offset = config.center_offset;
@@ -226,7 +230,7 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void objectCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles);
   // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
-  void laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info);
+  void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
   void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
   void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
   void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
@@ -364,7 +368,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
     return;
   }
   // Print Waypoints
-  // for (int i = 0; i < local_lane_.x.size(); i++)
+  // for (size_t i = 0; i < local_lane_.x.size(); i++)
   // {
   // 	std::cout << "waypoint no." << i << ": " << local_lane_.x[i] << " " << local_lane_.y[i] << std::endl;
   // }
@@ -543,10 +547,10 @@ autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(con
 //   lane_ = fop::Lane(lane_info);
 // }
 
-void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& lane_info)
+void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
 {
-  lane_ = fop::Lane(lane_info, LEFT_LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
-  ROS_INFO("Local Planner: Lane Info Received, with %d points", int(lane_.points.size()));
+  lane_ = fop::Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
+  ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
 
 // Listen to control output
@@ -575,7 +579,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
   nav_msgs::Path ref_path_msg;
   ref_path_msg.header.frame_id = "map";
 
-  for (int i = 0; i < path.yaw.size(); i++)
+  for (size_t i = 0; i < path.yaw.size(); i++)
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
@@ -594,7 +598,7 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
   nav_msgs::Path output_path_msg;
   output_path_msg.header.frame_id = "map";
 
-  for (int i = 0; i < path.yaw.size(); i++)
+  for (size_t i = 0; i < path.yaw.size(); i++)
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
@@ -616,7 +620,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
   nav_msgs::Path output_path_msg;
   output_path_msg.header.frame_id = "map";
 
-  for (int i = 0; i < frenet_path.c.size(); i++)
+  for (size_t i = 0; i < frenet_path.c.size(); i++)
   {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
@@ -717,30 +721,68 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     ROS_WARN("Local Planner: Vehicle's Location Is Too Far From The Target Lane");
     return false;
   }
-  else if (heading_diff > HEADING_DIFF_THRESH || heading_diff < -HEADING_DIFF_THRESH)
+  else if (std::fabs(heading_diff) > HEADING_DIFF_THRESH)
   {
     ROS_WARN("Local Planner: Vehicle's Is Heading In A Different Direction");
     return false;
   }
+
+  // clear the old waypoints
+  local_lane_.clear(); 
+
+  if (start_id > lane_.points.size() - 5)
+  {
+    start_id = lane_.points.size() - 5;
+  }
+
+  // feed the new waypoints
+  // for (size_t i = 0; i < 5; i++)
+  // {
+  //   local_lane_.points.push_back(lane_.points[start_id + i]);
+  //   // std::cout << "waypoint no:" << start_id + i << std::endl;
+  // }
+
+  // Check if the global waypoints need to be filtered
+  if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= REF_SPLINE_LENGTH)
+  {
+    // Filter the waypoints 
+    double s_cumulative = 0.0;
+    local_lane_.points.push_back(lane_.points[start_id]);
+    for (size_t i = start_id + 1; i < lane_.points.size(); i++)
+    {
+      if ((lane_.points[i].point.s - local_lane_.points.back().point.s) >= REF_SPLINE_LENGTH/5.0)
+      {
+        local_lane_.points.push_back(lane_.points[i]);
+      }
+    }
+  }
   else
   {
-    // clear the old waypoints
-    local_lane_.clear();
-
-    if (start_id > lane_.points.size() - 5)
+    if (lane_.points.size() > 5)
     {
-      start_id = lane_.points.size() - 5;
-    }
-    
-    // feed the new waypoints
-    for (int i = 0; i < 5; i++)
-    {
-      local_lane_.points.push_back(lane_.points[start_id + i]);
-      // std::cout << "waypoint no:" << start_id + i << std::endl;
-    }
+      const int first_id = start_id;                            // 0
+      const int third_id = (lane_.points.size() - first_id)/2;  // 2
+      const int last_id = lane_.points.size() - 1;              // 4
+      const int second_id = (first_id + third_id)/2;            // 1
+      const int fourth_id = (third_id + last_id)/2;             // 3
 
-    return true;
+      local_lane_.points.push_back(lane_.points[first_id]);
+      local_lane_.points.push_back(lane_.points[second_id]);
+      local_lane_.points.push_back(lane_.points[third_id]);
+      local_lane_.points.push_back(lane_.points[fourth_id]);
+      local_lane_.points.push_back(lane_.points[last_id]);
+    }
+    else
+    {
+      // feed the new waypoints
+      for (size_t i = 0; i < 5; i++)
+      {
+        local_lane_.points.push_back(lane_.points[start_id + i]);
+      }
+    }
   }
+
+  return true;
 }
 
 // Update the vehicle start state in frenet
@@ -839,7 +881,7 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
   double keep_lane_cost = std::numeric_limits<double>::max();
   double change_lane_cost = std::numeric_limits<double>::max();
 
-  for (int i = 0; i < best_path_list.size(); i++)
+  for (size_t i = 0; i < best_path_list.size(); i++)
   {
     if (!best_path_list[i].x.empty())
     {
@@ -914,7 +956,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
   // std::cout << "Output Path Size: " << output_path_.x.size() << " Current Size: " << path_size << " Diff: " << diff
   //           << " Next Path Size: " << frenet_path.x.size() << std::endl;
 
-  for (int i = 0; i < diff; i++)
+  for (size_t i = 0; i < diff; i++)
   {
     double wp_seperation;
 
@@ -954,7 +996,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
 
     const int next_wp_id = fop::nextWaypoint(current_state_, output_path_);
 
-    for (int i = 0; i < next_wp_id; i++)
+    for (size_t i = 0; i < next_wp_id; i++)
     {
       output_path_.x.erase(output_path_.x.begin());
       output_path_.y.erase(output_path_.y.begin());

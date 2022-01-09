@@ -54,6 +54,12 @@ double distance(const double x1, const double y1, const double x2, const double 
   return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
+// Calculate the Euclideam distance between two poses
+double distance(const geometry_msgs::Pose& a, const geometry_msgs::Pose& b)
+{
+  return distance(a.position.x, a.position.y, b.position.x, b.position.y);
+}
+
 // Calculate the Euclideam distance between two points
 double magnitude(const double x, const double y, const double z)
 {

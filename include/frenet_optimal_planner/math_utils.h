@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <cmath>
+#include <geometry_msgs/Pose.h>
 
 namespace fop
 {
@@ -37,6 +38,8 @@ double limitWithinRange(double value, const double lower_bound, const double upp
 
 // Calculate the Euclideam distance between two points
 double distance(const double x1, const double y1, const double x2, const double y2);
+// Calculate the Euclideam distance between two poses
+double distance(const geometry_msgs::Pose& a, const geometry_msgs::Pose& b);
 
 // Calculate the magnitude of a vector 
 double magnitude(const double x, const double y, const double z);

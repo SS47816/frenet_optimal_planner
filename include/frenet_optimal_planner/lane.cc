@@ -12,12 +12,15 @@ namespace fop
 
 Waypoint::Waypoint() {}
 Waypoint::Waypoint(const double x, const double y, const double yaw)
-  : x(x), y(y), yaw(yaw) {}
+  : x(x), y(y), yaw(yaw), s(0.0) {}
+Waypoint::Waypoint(const double x, const double y, const double yaw, const double s)
+  : x(x), y(y), yaw(yaw), s(s) {}
 Waypoint::Waypoint(const tf::Pose& pose)
 {
   this->x = pose.getOrigin().x();
   this->y = pose.getOrigin().y();
   this->yaw = tf::getYaw(pose.getRotation());
+  this->s = 0.0;
 }
 Waypoint::Waypoint(const geometry_msgs::Pose& pose_msg)
 {
@@ -26,15 +29,25 @@ Waypoint::Waypoint(const geometry_msgs::Pose& pose_msg)
   this->x = pose.getOrigin().x();
   this->y = pose.getOrigin().y();
   this->yaw = tf::getYaw(pose.getRotation());
+  this->s = 0.0;
+}
+Waypoint::Waypoint(const geometry_msgs::Pose& pose_msg, const double s)
+{
+  tf::Pose pose;
+  tf::poseMsgToTF(pose_msg, pose);
+  this->x = pose.getOrigin().x();
+  this->y = pose.getOrigin().y();
+  this->yaw = tf::getYaw(pose.getRotation());
+  this->s = s;
 }
 
 LanePoint::LanePoint() {};
 LanePoint::LanePoint(const Waypoint& point, const double left_width, const double right_width, const double far_left_width, const double far_right_width)
   : point(point), left_width(left_width), right_width(right_width), far_left_width(far_left_width), far_right_width(far_right_width) {}
-LanePoint::LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width)
+LanePoint::LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width, const double s)
   : left_width(left_width), right_width(right_width), far_left_width(far_left_width), far_right_width(far_right_width)
 {
-  this->point = Waypoint(pose);
+  this->point = Waypoint(pose, s);
 }
 
 
@@ -54,17 +67,23 @@ LanePoint::LanePoint(const geometry_msgs::Pose& pose, const double left_width, c
 //   }
 // }
 
-Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double lane_width, const double left_lane_width, const double right_lane_width)
+Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width)
 {
-  for (auto& ref_pose : ref_path->poses)
+  this->points.emplace_back(LanePoint(ref_path->poses[0].pose, left_width, right_width, far_left_width, far_right_width, 0.0));
+  for (size_t i = 1; i < ref_path->poses.size(); i++)
   {
-    this->points.emplace_back(LanePoint(ref_pose.pose, lane_width/2, lane_width/2, lane_width/2 + left_lane_width, lane_width/2 + right_lane_width));
-    // this->left_widths.emplace_back(lane_width/2);
-    // this->right_widths.emplace_back(lane_width/2);
-    // this->far_left_widths.emplace_back(lane_width/2 + left_lane_width);
-    // this->far_right_widths.emplace_back(lane_width/2 + right_lane_width);
-    // this->special_points.emplace_back(waypoint.special_point);
+    this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, distance(ref_path->poses[i-1].pose, ref_path->poses[i].pose)));
   }
+  
+  // for (auto& ref_pose : ref_path->poses)
+  // {
+  //   this->points.emplace_back(LanePoint(ref_pose.pose, left_width, right_width, far_left_width, far_right_width));
+  //   // this->left_widths.emplace_back(lane_width/2);
+  //   // this->right_widths.emplace_back(lane_width/2);
+  //   // this->far_left_widths.emplace_back(lane_width/2 + left_lane_width);
+  //   // this->far_right_widths.emplace_back(lane_width/2 + right_lane_width);
+  //   // this->special_points.emplace_back(waypoint.special_point);
+  // }
 }
 
 void Lane::clear()
