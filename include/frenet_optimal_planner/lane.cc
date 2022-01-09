@@ -69,10 +69,12 @@ LanePoint::LanePoint(const geometry_msgs::Pose& pose, const double left_width, c
 
 Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width)
 {
-  this->points.emplace_back(LanePoint(ref_path->poses[0].pose, left_width, right_width, far_left_width, far_right_width, 0.0));
+  double s_total = 0.0;
+  this->points.emplace_back(LanePoint(ref_path->poses[0].pose, left_width, right_width, far_left_width, far_right_width, s_total));
   for (size_t i = 1; i < ref_path->poses.size(); i++)
   {
-    this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, distance(ref_path->poses[i-1].pose, ref_path->poses[i].pose)));
+    s_total += distance(ref_path->poses[i-1].pose, ref_path->poses[i].pose);
+    this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, s_total));
   }
   
   // for (auto& ref_pose : ref_path->poses)

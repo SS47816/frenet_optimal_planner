@@ -33,9 +33,10 @@ namespace fop
 // Class for lane id
 enum LaneID
 {
-  BOTH_LANES,
+  RIGHT_LANE,
+  CURR_LANE,
   LEFT_LANE,
-  RIGHT_LANE
+  ALL_LANES,
 };
 
 struct Waypoint
