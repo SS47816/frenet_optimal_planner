@@ -11,7 +11,7 @@
 namespace fop
 {
 
-FrenetState getFrenet(VehicleState current_state, const Lane& lane)
+FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
 {
   // std::cout << "getFrenet() Break 0" << std::endl;
 
@@ -88,7 +88,7 @@ FrenetState getFrenet(VehicleState current_state, const Lane& lane)
   return state;
 }
 
-FrenetState getFrenet(VehicleState current_state, const Path& path)
+FrenetState getFrenet(const VehicleState& current_state, const Path& path)
 {
   // std::cout << "getFrenet() Break 0" << std::endl;
   int next_wp_id = nextWaypoint(current_state, path);

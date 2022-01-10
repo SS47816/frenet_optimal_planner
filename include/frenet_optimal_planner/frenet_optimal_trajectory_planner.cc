@@ -144,16 +144,15 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         frenet_path.d_ddd.push_back(lateral_quintic_poly.calculateThirdDerivative(t));
       }
 
-      // generate longitudinal quintic polynomial
-      for (double target_speed = settings_.target_speed - settings_.num_speed_sample * settings_.delta_speed;
-           target_speed <= settings_.max_speed;
-           target_speed +=
-           settings_.delta_speed)  // settings_.target_speed + settings_.num_speed_sample*settings_.delta_speed
+      // generate longitudinal quartic polynomial
+      const double min_sample_speed = settings_.target_speed - (settings_.num_speed_sample - 1)/2*settings_.delta_speed;
+      const double max_sample_speed = settings_.target_speed + (settings_.num_speed_sample - 1)/2*settings_.delta_speed;
+      for (double sample_speed = min_sample_speed; sample_speed <= max_sample_speed; sample_speed += settings_.delta_speed)
       {
-        while (target_speed <= 0)  // ensure target speed is positive
+        if (sample_speed <= 0)  // ensure target speed is positive
         {
           ROS_WARN("target speed too low, increasing value");
-          target_speed += settings_.delta_speed;
+          continue;
         }
 
         // copy the longitudinal path over
@@ -167,7 +166,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
 
         // end longitudinal state [s_d, s_dd]
         std::vector<double> end_s;
-        end_s.push_back(target_speed);
+        end_s.push_back(sample_speed);
         end_s.push_back(0.0);
 
         // generate longitudinal quartic polynomial
@@ -187,10 +186,9 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         double jerk_s = 0.0;
         double jerk_d = 0.0;
 
-        // encourage driving inbetween the desired speed and current speet
+        // encourage driving inbetween the desired speed and current speed
         speed_diff = pow(desired_speed - target_frenet_path.s_d.back(), 2) +
-                     0.5 * pow(current_speed - target_frenet_path.s_d.back(),
-                               2);  //! 0.5 factor is to incentivize the speed to be closer to desired speed
+                     0.5 * pow(current_speed - target_frenet_path.s_d.back(), 2);  //! 0.5 factor is to incentivize the speed to be closer to desired speed
 
         // calculate total squared jerks
         for (int i = 0; i < target_frenet_path.t.size(); i++)
@@ -205,11 +203,10 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         target_frenet_path.cd = settings_.k_jerk * jerk_d + planning_time_cost +
                                 settings_.k_diff * pow(target_frenet_path.d.back() - center_offset, 2);
         target_frenet_path.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff;
-        target_frenet_path.cf =
-            settings_.k_lateral * target_frenet_path.cd + settings_.k_longitudinal * target_frenet_path.cs;
+        target_frenet_path.cf = settings_.k_lateral * target_frenet_path.cd + settings_.k_longitudinal * target_frenet_path.cs;
 
         //! Assign the speed of the path
-        target_frenet_path.speed = target_speed;
+        target_frenet_path.speed = sample_speed;
 
         //! Initialize curvature check safe before check
         target_frenet_path.curvature_check = true;
@@ -380,19 +377,16 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
 
     if (safe)
     {
-      const double max_curvature_rate = settings_.steering_angle_rate / fop::Vehicle::Lr();
-      const double max_curvature_change = 2*(max_curvature_rate * settings_.tick_t - 0.0005);  //! 0.0005 is margin
-
       //! Do curvature check only on waypoints to be put into path
       for (int j = 0; j < frenet_path.c.size(); j++)
       {
         if (j > 0 && j < path_size)
         {
-          if (fabs(frenet_path.c[j] - frenet_path.c[j-1]) > max_curvature_change)
+          if (fabs(frenet_path.c[j] - frenet_path.c[j-1]) > fop::Vehicle::max_curvature(settings_.tick_t))
           {
             // frenet_path.curvature_check = false;
-            std::cout << "Exceeded max curvature change = " << max_curvature_change << ". Curr curvature change = "
-            << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
+            std::cout << "Exceeded max curvature = " << fop::Vehicle::max_curvature(settings_.tick_t) 
+                      << ". Curr curvature rate = " << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
             break;
           }
         }

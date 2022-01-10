@@ -77,8 +77,8 @@ class FrenetPath
 };
 
 // Convert the position in Cartesian coordinates to Frenet frame
-FrenetState getFrenet(VehicleState current_state, const Lane& lane);
-FrenetState getFrenet(VehicleState current_state, const Path& path);
+FrenetState getFrenet(const VehicleState& current_state, const Lane& lane);
+FrenetState getFrenet(const VehicleState& current_state, const Path& path);
 
 }  // end of namespace fop
 

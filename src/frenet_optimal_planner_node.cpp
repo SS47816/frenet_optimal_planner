@@ -85,7 +85,8 @@ const double ERROR_VALUE = std::numeric_limits<double>::lowest(); // Error value
 // Hyperparameters for output path
 double OUTPUT_PATH_MAX_SIZE;  // Maximum size of the output path
 double OUTPUT_PATH_MIN_SIZE;  // Minimum size of the output path
-double REF_SPLINE_LENGTH;
+// double REF_SPLINE_LENGTH;
+double REF_SPEED;
 // Stanley gains
 double STANLEY_OVERALL_GAIN;  // Stanley overall gain
 double TRACK_ERROR_GAIN;      // Cross track error gain
@@ -105,7 +106,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // Hyperparameters for output path
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
-  REF_SPLINE_LENGTH = config.ref_spline_length;
+  // REF_SPLINE_LENGTH = config.ref_spline_length;
+  REF_SPEED = config.ref_speed;
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::width();
   SETTINGS.vehicle_length = fop::Vehicle::length();
@@ -131,7 +133,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_speed = fop::Vehicle::max_speed();
   SETTINGS.max_accel = fop::Vehicle::max_acceleration();
   SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = fop::Vehicle::max_curvature();
+  SETTINGS.max_curvature = fop::Vehicle::max_curvature(config.tick_t);
   SETTINGS.steering_angle_rate = fop::Vehicle::steering_angle_rate();
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
@@ -191,7 +193,7 @@ private:
 
   double current_steering_angle_;
 
-  double behaviour_min_speed_ = 7.0;
+  double ref_speed_ = kph2mps(30);
 
   // subscriber and publishers
   ros::Subscriber odom_sub;
@@ -199,7 +201,7 @@ private:
   ros::Subscriber behaviour_sub;
   ros::Subscriber cmd_sub;
   ros::Subscriber obstacles_sub;
-  ros::Subscriber behaviour_min_speed_sub;
+  ros::Subscriber ref_speed_sub;
   ros::Subscriber current_steering_angle_sub;
   // ros::Subscriber special_waypoint_sub;
 
@@ -271,79 +273,67 @@ private:
 // Constructor
 FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 {
-  // Initializing states
-  regenerate_flag_ = false;
-  turn_signal_ = 0;
-  target_lane_ = LaneID::CURR_LANE;
+  // Hyperparameter
+  double planning_frequency;
+
+  // topics
+  std::string odom_topic;
+  std::string lane_info_topic;
+  std::string objects_topic;
+  std::string ref_speed_topic;
+  std::string cmd_topic;
+  std::string current_steering_angle_topic;
+
+  std::string ref_path_topic;
+  std::string output_path_topic;
+  std::string next_path_topic;
+  std::string steering_angle_topic;
+  std::string turn_signal_topic;
 
   ros::NodeHandle private_nh("~");
   // Dynamic Parameter Server & Function
   f = boost::bind(&dynamicParamCallback, _1, _2);
   server.setCallback(f);
 
-  // topics
-  std::string odom_topic_;
-  std::string obstacle_topic_;
-  std::string obstacle_topic_2_;
-  std::string lane_info_topic_;
-  std::string cmd_topic_;
-  std::string current_steering_angle_topic_;
-
-  std::string output_path_topic_;
-  std::string next_path_topic_;
-  std::string ref_path_topic_;
-  std::string steering_angle_topic_;
-  std::string turn_signal_topic_;
-  // std::string special_waypoint_topic_;
-
-  std::string objects_topic;
-
-  std::string beahviour_min_speed_topic_;
-  // std::string planner_target_speed_topic_;
-
-  // Hyperparameters
-  double planning_frequency_;
-
   // Parameters from launch file: topic names
-  ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic_));
-  ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic_));
-  ROS_ASSERT(private_nh.getParam("cmd_topic", cmd_topic_));
-  ROS_ASSERT(private_nh.getParam("behaviour_min_speed_topic", beahviour_min_speed_topic_));
-  ROS_ASSERT(private_nh.getParam("current_steering_angle_topic", current_steering_angle_topic_));
-  ROS_ASSERT(private_nh.getParam("output_path_topic", output_path_topic_));
-  ROS_ASSERT(private_nh.getParam("next_path_topic", next_path_topic_));
-  ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic_));
-  ROS_ASSERT(private_nh.getParam("steering_angle_topic", steering_angle_topic_));
-  ROS_ASSERT(private_nh.getParam("turn_signal_topic", turn_signal_topic_));
-  // ROS_ASSERT(private_nh.getParam("planner_target_speed_topic", planner_target_speed_topic_));
-  // ROS_ASSERT(private_nh.getParam("special_waypoint_topic", special_waypoint_topic_));
+  ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic));
+  ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic));
+  ROS_ASSERT(private_nh.getParam("cmd_topic", cmd_topic));
+  ROS_ASSERT(private_nh.getParam("ref_speed_topic", ref_speed_topic));
+  ROS_ASSERT(private_nh.getParam("current_steering_angle_topic", current_steering_angle_topic));
+  ROS_ASSERT(private_nh.getParam("output_path_topic", output_path_topic));
+  ROS_ASSERT(private_nh.getParam("next_path_topic", next_path_topic));
+  ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
+  ROS_ASSERT(private_nh.getParam("steering_angle_topic", steering_angle_topic));
+  ROS_ASSERT(private_nh.getParam("turn_signal_topic", turn_signal_topic));
 
   // Hyperparameters
-  ROS_ASSERT(private_nh.getParam("planning_frequency", planning_frequency_));
+  ROS_ASSERT(private_nh.getParam("planning_frequency", planning_frequency));
   ROS_ASSERT(private_nh.getParam("objects_topic", objects_topic));
-
-  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("candidate_paths", 1);
 
   // Instantiate FrenetOptimalTrajectoryPlanner
   frenet_planner_instance = FrenetOptimalTrajectoryPlanner(SETTINGS);
 
   // Subscribe & Advertise
-  odom_sub = nh.subscribe(odom_topic_, 1, &FrenetOptimalPlannerNode::odomCallback, this);
-  lane_info_sub = nh.subscribe(lane_info_topic_, 1, &FrenetOptimalPlannerNode::laneInfoCallback, this);
-  cmd_sub = nh.subscribe(cmd_topic_, 1, &FrenetOptimalPlannerNode::cmdCallback, this);
+  odom_sub = nh.subscribe(odom_topic, 1, &FrenetOptimalPlannerNode::odomCallback, this);
+  lane_info_sub = nh.subscribe(lane_info_topic, 1, &FrenetOptimalPlannerNode::laneInfoCallback, this);
+  cmd_sub = nh.subscribe(cmd_topic, 1, &FrenetOptimalPlannerNode::cmdCallback, this);
   obstacles_sub = nh.subscribe(objects_topic, 1, &FrenetOptimalPlannerNode::objectCallback, this);
-  behaviour_min_speed_sub = nh.subscribe(beahviour_min_speed_topic_, 1, &FrenetOptimalPlannerNode::collisionSpeedCallback, this);
-  current_steering_angle_sub = nh.subscribe(current_steering_angle_topic_, 1, &FrenetOptimalPlannerNode::currSteeringAngleCallback, this);
-  // special_waypoint_sub = nh.subscribe(special_waypoint_topic_, 1, &FrenetOptimalPlannerNode::specialWaypointCallback, this);
-  ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic_, 1);
-  output_path_pub = nh.advertise<nav_msgs::Path>(output_path_topic_, 1);
-  next_path_pub = nh.advertise<nav_msgs::Path>(next_path_topic_, 1);
-  steering_angle_pub = nh.advertise<std_msgs::Float64>(steering_angle_topic_, 1);
-  turn_signal_pub = nh.advertise<std_msgs::Int16>(turn_signal_topic_, 1);
-  // planner_target_speed_pub = nh.advertise<std_msgs::Float64>(planner_target_speed_topic_, 1);
+  ref_speed_sub = nh.subscribe(ref_speed_topic, 1, &FrenetOptimalPlannerNode::collisionSpeedCallback, this);
+  current_steering_angle_sub = nh.subscribe(current_steering_angle_topic, 1, &FrenetOptimalPlannerNode::currSteeringAngleCallback, this);
+  
+  ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
+  output_path_pub = nh.advertise<nav_msgs::Path>(output_path_topic, 1);
+  next_path_pub = nh.advertise<nav_msgs::Path>(next_path_topic, 1);
+  steering_angle_pub = nh.advertise<std_msgs::Float64>(steering_angle_topic, 1);
+  turn_signal_pub = nh.advertise<std_msgs::Int16>(turn_signal_topic, 1);
+  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("candidate_paths", 1);
 
-  // timer
-  timer = nh.createTimer(ros::Duration(1.0 / planning_frequency_), &FrenetOptimalPlannerNode::mainTimerCallback, this);
+  // Initializing states
+  regenerate_flag_ = false;
+  turn_signal_ = 0;
+  target_lane_ = LaneID::CURR_LANE;
+  timer = nh.createTimer(ros::Duration(1.0 / planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
 };
 
 // Local planner main logic
@@ -392,7 +382,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Get the planning result 
   std::vector<fop::FrenetPath> best_path_list = frenet_planner_instance.frenetOptimalPlanning(
       result.cubic_spline, start_state_, SETTINGS.centre_offset, roi_boundaries_[0], roi_boundaries_[1],
-      obstacles, behaviour_min_speed_, current_state_.v, OUTPUT_PATH_MAX_SIZE);
+      obstacles, REF_SPEED, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
@@ -553,7 +543,7 @@ void FrenetOptimalPlannerNode::cmdCallback(const geometry_msgs::Twist::ConstPtr&
 
 void FrenetOptimalPlannerNode::collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg)
 {
-  behaviour_min_speed_ = min_speed_msg->data;
+  ref_speed_ = min_speed_msg->data;
 }
 
 void FrenetOptimalPlannerNode::currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg)
@@ -743,15 +733,9 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     start_id = lane_.points.size() - 5;
   }
 
-  // feed the new waypoints
-  // for (size_t i = 0; i < 5; i++)
-  // {
-  //   local_lane_.points.push_back(lane_.points[start_id + i]);
-  //   // std::cout << "waypoint no:" << start_id + i << std::endl;
-  // }
-
   // Check if the global waypoints need to be filtered
-  if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= REF_SPLINE_LENGTH)
+  const double ref_spline_length = REF_SPEED*(SETTINGS.max_t + 2.0);
+  if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= ref_spline_length)
   {
     // Filter the waypoints to a uniform density
     double s_current = lane_.points[start_id].point.s;
@@ -762,7 +746,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
       {
         break;
       }
-      else if ((lane_.points[i].point.s - s_current) >= REF_SPLINE_LENGTH/5.0)
+      else if ((lane_.points[i].point.s - s_current) >= ref_spline_length/5.0)
       {
         s_current = lane_.points[i].point.s;
         local_lane_.points.push_back(lane_.points[i]);
@@ -778,8 +762,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     {
       const int first_id = start_id;                            // 0
       const int fifth_id = lane_.points.size() - 1;             // 4
-      const int third_id = (lane_.points.size() + first_id)/2;  // 2
-      
+      const int third_id = (first_id + fifth_id)/2;             // 2
       const int second_id = (first_id + third_id)/2;            // 1
       const int fourth_id = (third_id + fifth_id)/2;            // 3
 
@@ -838,8 +821,7 @@ void FrenetOptimalPlannerNode::updateStartState()
         hypot(output_path_.x.back() - output_path_.x.end()[-2], output_path_.y.back() - output_path_.y.end()[-2]) /
         SETTINGS.tick_t;
     // End of the previous path state
-    fop::VehicleState last_state = fop::VehicleState(output_path_.x.back(), output_path_.y.back(),
-                                                                      output_path_.yaw.back(), output_path_last_speed);
+    fop::VehicleState last_state = fop::VehicleState(output_path_.x.back(), output_path_.y.back(), output_path_.yaw.back(), output_path_last_speed);
 
     start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(last_state, local_lane_) : fop::getFrenet(last_state, ref_spline_);
   }
@@ -863,7 +845,7 @@ void FrenetOptimalPlannerNode::updateStartState()
   else
   {
     current_lane_ = -1;
-    ROS_WARN("Vehicle's lateral position is too far off");
+    ROS_WARN("Vehicle's lateral position is %f, too far off", start_state_.d);
   }
 }
 
