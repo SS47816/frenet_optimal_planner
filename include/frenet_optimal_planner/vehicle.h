@@ -30,7 +30,7 @@ class Vehicle
   static double max_speed();
   static double max_acceleration();
   static double max_deceleration();
-  static double max_curvature();
+  static double max_curvature(const double delta_t);
   static double steering_angle_rate();
 
 };
