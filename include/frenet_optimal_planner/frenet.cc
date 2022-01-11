@@ -16,19 +16,20 @@ FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
   // std::cout << "getFrenet() Break 0" << std::endl;
 
   int next_wp_id = nextWaypoint(current_state, lane);
-  int prev_wp_id = next_wp_id - 1;
-
   // std::cout << "getFrenet() Break 1" << std::endl;
 
   // if it reaches the end of the waypoint list
   if (next_wp_id >= lane.points.size())
   {
-    prev_wp_id = lane.points.size() - 1;
+    next_wp_id = lane.points.size() - 1;
   }
+
+  const int prev_wp_id = next_wp_id - 1;
 
   // vector n from previous waypoint to next waypoint
   const double n_x = lane.points[next_wp_id].point.x - lane.points[prev_wp_id].point.x;
   const double n_y = lane.points[next_wp_id].point.y - lane.points[prev_wp_id].point.y;
+
   // vector x from previous waypoint to current position
   const double x_x = current_state.x - lane.points[prev_wp_id].point.x;
   const double x_y = current_state.y - lane.points[prev_wp_id].point.y;
@@ -48,15 +49,7 @@ FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
   // double d_y = lane.dy[prev_wp_id];
   // double wp_yaw = atan2(d_y, d_x) + M_PI / 2;
   const double wp_yaw = lane.points[prev_wp_id].point.yaw;
-  double delta_yaw = current_state.yaw - wp_yaw;
-  while (delta_yaw > M_PI)
-  {
-    delta_yaw -= (2 * M_PI);
-  }
-  while (delta_yaw < -M_PI)
-  {
-    delta_yaw += (2 * M_PI);
-  }
+  const double delta_yaw = unifyAngleRange(current_state.yaw - wp_yaw);
 
   // std::cout << "getFrenet() Break 3" << std::endl;
 

@@ -73,8 +73,12 @@ Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, co
   this->points.emplace_back(LanePoint(ref_path->poses[0].pose, left_width, right_width, far_left_width, far_right_width, s_total));
   for (size_t i = 1; i < ref_path->poses.size(); i++)
   {
-    s_total += distance(ref_path->poses[i-1].pose, ref_path->poses[i].pose);
-    this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, s_total));
+    const double dist = distance(ref_path->poses[i-1].pose, ref_path->poses[i].pose);
+    if (dist >= 0.01) // make sure there is no duplicated waypoints
+    {
+      s_total += dist;
+      this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, s_total));
+    }
   }
   
   // for (auto& ref_pose : ref_path->poses)
