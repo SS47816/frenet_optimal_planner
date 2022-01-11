@@ -342,9 +342,9 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Check if all required data are in position
   if (obstacles.objects.size() == 0)
   {
-    ROS_FATAL("Local Planner: No obstacles received, No Path Generated");
-    publishEmptyPaths();
-    return;
+    ROS_WARN("Local Planner: No obstacles received");
+    // publishEmptyPaths();
+    // return;
   }
   ROS_INFO("Local Planner: Planning Start");
 
@@ -431,6 +431,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 // Update vehicle current state from the tf transform
 void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
 {
+
   current_state_.v = magnitude(odom_msg->twist.twist.linear.x, odom_msg->twist.twist.linear.y, odom_msg->twist.twist.linear.z);
 
   geometry_msgs::TransformStamped transform_stamped;
@@ -790,9 +791,6 @@ void FrenetOptimalPlannerNode::updateStartState()
     return;
   }
 
-  // The new starting state
-  // fop::FrenetState new_state;
-
   // if the current path size is too small, regenerate
   if (output_path_.x.size() < OUTPUT_PATH_MIN_SIZE)
   {
@@ -817,9 +815,7 @@ void FrenetOptimalPlannerNode::updateStartState()
     ROS_INFO("Local Planner: Continuing From The Previous Path...");
 
     // End of the previous path speed
-    const double output_path_last_speed =
-        hypot(output_path_.x.back() - output_path_.x.end()[-2], output_path_.y.back() - output_path_.y.end()[-2]) /
-        SETTINGS.tick_t;
+    const double output_path_last_speed = hypot(output_path_.x.back() - output_path_.x.end()[-2], output_path_.y.back() - output_path_.y.end()[-2]) / SETTINGS.tick_t;
     // End of the previous path state
     fop::VehicleState last_state = fop::VehicleState(output_path_.x.back(), output_path_.y.back(), output_path_.yaw.back(), output_path_last_speed);
 
