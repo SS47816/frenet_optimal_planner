@@ -26,27 +26,24 @@
     <param name="enableDynamicMapUpdate"      value="false" />
   </node> 
 
-  <!-- Path planner -->
+  <!-- Local Planner -->
   <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
-    
+    <!-- Hyperparameters -->
+    <param name="planning_frequency"    value="10.0"/>
     <!-- Input Topic Names -->
-    <param name="odom_topic"                    value="/simulator/ground_truth/odom"/>
-    <param name="objects_topic"                 value="/lgsvl_utils/ground_truth/objects"/>
-    <param name="lane_info_topic"               value="/planning/mission_planning/global_path"/>
-    <param name="cmd_topic"                     value="/cmd_vel_out"/>
-    <param name="ref_speed_topic"		            value="/behaviour_planner/min_speed"/>
-    <param name="current_steering_angle_topic" 	value="/present_steering_angle"/>
-
+    <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
+    <param name="objects_topic"                 value="lgsvl_utils/ground_truth/objects"/>
+    <param name="lane_info_topic"               value="planning/mission_planning/global_path"/>
+    <!-- <param name="cmd_topic"                     value="cmd_vel_out"/>
+    <param name="ref_speed_topic"		            value="behaviour_planner/min_speed"/>
+    <param name="current_steering_angle_topic" 	value="present_steering_angle"/> -->
     <!-- Output Topic Names -->
     <param name="output_path_topic"             value="local_planner/output_path"/>
     <param name="next_path_topic"               value="local_planner/next_path"/>
     <param name="ref_path_topic"                value="local_planner/ref_path"/>
-    <param name="steering_angle_topic"          value="/desired_steering_angle"/>
-    <param name="turn_signal_topic"             value="/turn_signal"/>
-    <param name="planner_target_speed_topic"    value="local_planner/target_speed"/>
-
-    <!-- Hyperparameters -->
-    <param name="planning_frequency"    value="10.0"/>
+    <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
+    <!-- <param name="turn_signal_topic"             value="turn_signal"/>
+    <param name="planner_target_speed_topic"    value="local_planner/target_speed"/> -->
   </node>
 
   <!-- Dynamic Reconfigure GUI -->
