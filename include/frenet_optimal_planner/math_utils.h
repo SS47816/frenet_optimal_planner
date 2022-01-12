@@ -44,6 +44,9 @@ double distance(const geometry_msgs::Pose& a, const geometry_msgs::Pose& b);
 // Calculate the magnitude of a vector 
 double magnitude(const double x, const double y, const double z);
 
+// Check if a value is legal (not nan or inf)
+bool isLegal(const double x);
+
 } // end of namespace fop
 
 #endif // MATH_UTILS_H_

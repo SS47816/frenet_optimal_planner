@@ -66,4 +66,10 @@ double magnitude(const double x, const double y, const double z)
   return sqrt(x*x + y*y + z*z);
 }
 
+// Check if a value is legal (not nan or inf)
+bool isLegal(const double x)
+{
+  return (std::isnan(x) || std::isinf(x))? false : true;
+}
+
 } // end of namespace fop

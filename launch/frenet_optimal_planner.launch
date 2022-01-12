@@ -32,7 +32,7 @@
     <param name="planning_frequency"    value="10.0"/>
     <!-- Input Topic Names -->
     <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
-    <param name="objects_topic"                 value="lgsvl_utils/ground_truth/objects"/>
+    <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>
     <param name="lane_info_topic"               value="planning/mission_planning/global_path"/>
     <!-- <param name="cmd_topic"                     value="cmd_vel_out"/>
     <param name="ref_speed_topic"		            value="behaviour_planner/min_speed"/>

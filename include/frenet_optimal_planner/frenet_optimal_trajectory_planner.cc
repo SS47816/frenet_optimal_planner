@@ -45,9 +45,8 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanni
     double current_speed, int path_size)
 {
   // Sample a list of FrenetPaths
-  std::vector<fop::FrenetPath> frenet_paths_list =
-      generateFrenetPaths(frenet_state, center_offset, left_width, right_width, desired_speed, current_speed);
-  int num_paths_generated = frenet_paths_list.size();
+  std::vector<fop::FrenetPath> frenet_paths_list = generateFrenetPaths(frenet_state, center_offset, left_width, right_width, desired_speed, current_speed);
+  const int num_paths_generated = frenet_paths_list.size();
   std::cout << "Total Paths Generated: " << frenet_paths_list.size() << std::endl;
 
   // Convert to global paths
@@ -361,7 +360,13 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
     bool curvature_passed = true;
     for (int j = 0; j < frenet_path.c.size(); j++)
     {
-      if (frenet_path.s_d[j] > settings_.max_speed)
+      if (!fop::isLegal(frenet_path.x[j]) || !fop::isLegal(frenet_path.y[j]))
+      {
+        safe = false;
+        std::cout << "Condition 0: Contains ilegal values" << std::endl;
+        break;
+      }
+      else if (frenet_path.s_d[j] > settings_.max_speed)
       {
         safe = false;
         std::cout << "Condition 1: Exceeded Max Speed" << std::endl;

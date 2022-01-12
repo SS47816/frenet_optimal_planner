@@ -47,6 +47,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <frenet_optimal_planner/frenet_optimal_planner_Config.h>
 
+#include "frenet_optimal_planner/pid.hpp"
 #include "frenet_optimal_planner/visualization.cpp"
 #include "frenet_optimal_planner/frenet_optimal_trajectory_planner.h"
 
@@ -75,6 +76,7 @@ private:
   int turn_signal_;                    // turn indicator signal, 1 = turn left, -1 = turn right, 0 = not turning
 
   // Control outputs
+  double acceleration_;
   double steering_angle_;
   double current_steering_angle_;
   double ref_speed_ = kph2mps(30);
@@ -92,6 +94,9 @@ private:
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre. roi
                                         //= region of interest
   
+  // Controllers
+  control::PID pid_;
+
   ros::NodeHandle nh;
 
   // subscriber and publishers
@@ -130,19 +135,19 @@ private:
   // Functions for subscribing
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles);
-  // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
-  void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
-  void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
-  void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
+  // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
+  // void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
+  // void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
+  // void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
   // void specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg);
 
   // Functions fo publishing results
+  void publishEmptyPaths();
   void publishRefSpline(const fop::Path& path);
   void publishOutputPath(const fop::Path& path);
   void publishNextPath(const fop::FrenetPath& frenet_path);
-  void publishEmptyPaths();
-  void publishSteeringAngle(const double angle);
+  void publishVehicleCmd(const double accel, const double angle);
   // void publishTurnSignal(const fop::FrenetPath& best_path, const bool change_lane, const double yaw_thresh);
   // void publishPlannerSpeed(const double speed);
   void publishCandidatePaths();
@@ -162,7 +167,7 @@ private:
   void concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation, const double wp_min_seperation);
 
   // Stanley Steeing Functions
-  double calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state);
+  bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
   autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
                                                      const geometry_msgs::TransformStamped& transform_stamped);

@@ -16,7 +16,8 @@ FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanne
 
 // Vehicle Parameters
 const double L = fop::Vehicle::L();  // Wheelbase length, back wheel to front wheel
-const double MAX_STEERING_ANGLE = fop::Vehicle::max_steering_angle();  // Maximum steering angle
+const double MAX_STEERING_ANGLE = fop::Vehicle::max_steering_angle();  // Maximum steering angle [rad]
+
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
 const double WP_MIN_SEP = 0.01;                                   // Minimum allowable waypoint separation
@@ -24,14 +25,15 @@ const double HEADING_DIFF_THRESH = M_PI / 2;                      // Maximum all
 const double DISTANCE_THRESH = 25.0;                              // Maximum allowed distance between vehicle and path
 const double MIN_PLANNING_SPEED = 1.0;                            // Minimum allowed vehicle speed for planning
 const int NUM_LOOK_AHEAD_WP = 1;                                  // Number of waypoints to look ahead for Stanley
-const double ERROR_VALUE = std::numeric_limits<double>::lowest(); // Error value for return
+// const double ERROR_VALUE = std::numeric_limits<double>::lowest(); // Error value for return
 
 /* List of dynamic parameters */
 // Hyperparameters for output path
 double OUTPUT_PATH_MAX_SIZE;  // Maximum size of the output path
 double OUTPUT_PATH_MIN_SIZE;  // Minimum size of the output path
-// double REF_SPLINE_LENGTH;
 double REF_SPEED;
+// Control Parameters
+double PID_Kp, PID_Ki, PID_Kd;
 // Stanley gains
 double STANLEY_OVERALL_GAIN;  // Stanley overall gain
 double TRACK_ERROR_GAIN;      // Cross track error gain
@@ -52,12 +54,15 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
   // REF_SPLINE_LENGTH = config.ref_spline_length;
-  REF_SPEED = config.ref_speed;
+  REF_SPEED = fop::kph2mps(config.ref_speed);
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::width();
   SETTINGS.vehicle_length = fop::Vehicle::length();
   SETTINGS.soft_safety_margin = config.soft_safety_margin;
-  // Stanley gains
+  // PID and Stanley gains
+  PID_Kp = config.PID_Kp;
+  PID_Ki = config.PID_Ki;
+  PID_Kd = config.PID_Kd;
   STANLEY_OVERALL_GAIN = config.stanley_overall_gain;
   TRACK_ERROR_GAIN = config.track_error_gain;
   // Sampling parameters (lateral)
@@ -157,6 +162,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   turn_signal_ = 0;
   target_lane_ = LaneID::CURR_LANE;
   timer = nh.createTimer(ros::Duration(1.0/planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
+  pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
 // Local planner main logic
@@ -254,7 +260,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // }
 
   // Publish steering angle
-  publishSteeringAngle(steering_angle_);
+  publishVehicleCmd(acceleration_, steering_angle_);
 }
 
 // Update vehicle current state from the tf transform
@@ -831,7 +837,12 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
   {
     const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_);
     ROS_INFO("Local Planner: Stanley Start");
-    steering_angle_ = calculateSteeringAngle(next_frontlink_wp_id, frontaxle_state_);
+
+    // If steering angle is an error value, publish nothing
+    if (!calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
+    {
+      ROS_ERROR("Local Planner: No output steering angle");
+    }
 
     const int next_wp_id = fop::nextWaypoint(current_state_, output_path_);
 
@@ -849,7 +860,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
 }
 
 // Steering Help Function
-double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, const fop::VehicleState& frontaxle_state)
+bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state)
 {
   const double wp_id = next_wp_id + NUM_LOOK_AHEAD_WP;
   // std::cout << "Output Path Size: " << output_path_.x.size() << " Next Waypoint ID: " << wp_id << std::endl;
@@ -860,7 +871,7 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
     ROS_ERROR("Local Planner: Output Path Too Short! No output steering angle");
     // std::cout << "Output Path Size: " << output_path_.x.size() << " Required Size: " << wp_id + 2 << std::endl;
     regenerate_flag_ = true;
-    return ERROR_VALUE;
+    return false;
   }
   else
   {
@@ -868,24 +879,21 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
     const double delta_yaw = fop::unifyAngleRange(output_path_.yaw[wp_id] - current_state_.yaw);
 
     // Second Term
-    const double c = fop::distance(output_path_.x[wp_id], output_path_.y[wp_id],
-                                           output_path_.x[wp_id+1], output_path_.y[wp_id+1]);
+    const double c = fop::distance(output_path_.x[wp_id], output_path_.y[wp_id], output_path_.x[wp_id+1], output_path_.y[wp_id+1]);
     // if two waypoints overlapped, return error value
     if (c <= WP_MIN_SEP)
     {
       regenerate_flag_ = true;
-      return ERROR_VALUE;
+      return false;
     }
-    const double a =
-        fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id], output_path_.y[wp_id]);
-    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id+1],
-                                           output_path_.y[wp_id+1]);
+    const double a = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id], output_path_.y[wp_id]);
+    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id+1], output_path_.y[wp_id+1]);
     // if the vehicle is too far from the waypoint, return error value
     if (a >= WP_MAX_SEP || b >= WP_MAX_SEP)
     {
       ROS_WARN("Local Planner: Vehicle is too far from the path, Regenerate");
       regenerate_flag_ = true;
-      return ERROR_VALUE;
+      return false;
     }
 
     const double p = (a + b + c) / 2.0;
@@ -893,10 +901,8 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
     const double x = triangle_area * 2.0 / c;
     const double u = std::max(1.0, current_state_.v);
 
-    // Angle of std::vector vehicle -> waypoint
-    const double vectors_angle_diff =
-        atan2(frontaxle_state.y - output_path_.y[wp_id], frontaxle_state.x - output_path_.x[wp_id]) -
-        output_path_.yaw[wp_id];
+    // Angle of vector vehicle -> waypoint
+    const double vectors_angle_diff = atan2(frontaxle_state.y - output_path_.y[wp_id], frontaxle_state.x - output_path_.x[wp_id]) - output_path_.yaw[wp_id];
     const double vectors_angle_diff_unified = fop::unifyAngleRange(vectors_angle_diff);
     const int direction = vectors_angle_diff_unified < 0 ? 1 : -1;
 
@@ -904,30 +910,24 @@ double FrenetOptimalPlannerNode::calculateSteeringAngle(const int next_wp_id, co
     steering_angle_ = STANLEY_OVERALL_GAIN * (delta_yaw + direction * atan(TRACK_ERROR_GAIN * x / u));
     // Check if exceeding max steering angle
     steering_angle_ = fop::limitWithinRange(steering_angle_, -MAX_STEERING_ANGLE, MAX_STEERING_ANGLE);
-    std::cout << "Steering Angle: " << fop::rad2deg(steering_angle_) << " degrees" << std::endl;
 
-    return steering_angle_;
+    // Calculate accelerator output
+    acceleration_ = pid_.calculate(REF_SPEED, current_state_.v);
+
+    ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", REF_SPEED, current_state_.v, acceleration_);
+    ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, fop::rad2deg(delta_yaw), fop::rad2deg(steering_angle_));
+    return true;
   }
 }
 
 // Publish the resulted steering angle (Stanley)
-void FrenetOptimalPlannerNode::publishSteeringAngle(const double angle)
+void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const double angle)
 {
-  // If steering angle is an error value, publish nothing
-  if (angle <= ERROR_VALUE)
-  {
-    ROS_ERROR("Local Planner: Output steering angle is NULL");
-    return;
-  }
-  // If steering angle is valid, publish it
-  else
-  {
-    std_msgs::Float64 steering_angle_msg;
-    steering_angle_msg.data = angle;
-    vehicle_cmd_pub.publish(steering_angle_msg);
-  }
-
   autoware_msgs::VehicleCmd vehicle_cmd;
+  vehicle_cmd.twist_cmd.twist.linear.x = accel/fop::Vehicle::max_acceleration();  // [pct]
+  vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
+  vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
+  vehicle_cmd_pub.publish(vehicle_cmd);
 }
 
 // // Publish the turn signal
