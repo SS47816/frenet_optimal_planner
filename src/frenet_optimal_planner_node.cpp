@@ -21,10 +21,10 @@ const double MAX_STEERING_ANGLE = fop::Vehicle::max_steering_angle();  // Maximu
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
 const double WP_MIN_SEP = 0.01;                                   // Minimum allowable waypoint separation
-const double HEADING_DIFF_THRESH = M_PI / 2;                      // Maximum allowed heading diff between vehicle and path
-const double DISTANCE_THRESH = 25.0;                              // Maximum allowed distance between vehicle and path
+const double HEADING_DIFF_THRESH = M_PI/2;                        // Maximum allowed heading diff between vehicle and path
+const double MAX_DIST_FROM_PATH = 10.0;                           // Maximum allowed distance between vehicle and path
 const double MIN_PLANNING_SPEED = 1.0;                            // Minimum allowed vehicle speed for planning
-const int NUM_LOOK_AHEAD_WP = 1;                                  // Number of waypoints to look ahead for Stanley
+
 // const double ERROR_VALUE = std::numeric_limits<double>::lowest(); // Error value for return
 
 /* List of dynamic parameters */
@@ -35,6 +35,7 @@ double REF_SPEED;
 // Control Parameters
 double PID_Kp, PID_Ki, PID_Kd;
 // Stanley gains
+int NUM_WP_LOOK_AHEAD;        // Number of waypoints to look ahead for Stanley
 double STANLEY_OVERALL_GAIN;  // Stanley overall gain
 double TRACK_ERROR_GAIN;      // Cross track error gain
 // Turn signal thresholds
@@ -63,6 +64,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;
   PID_Kd = config.PID_Kd;
+  NUM_WP_LOOK_AHEAD = config.num_wp_look_ahead;
   STANLEY_OVERALL_GAIN = config.stanley_overall_gain;
   TRACK_ERROR_GAIN = config.track_error_gain;
   // Sampling parameters (lateral)
@@ -258,9 +260,6 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   //     publishPlannerSpeed(best_path.speed);
   //   }
   // }
-
-  // Publish steering angle
-  publishVehicleCmd(acceleration_, steering_angle_);
 }
 
 // Update vehicle current state from the tf transform
@@ -292,8 +291,6 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   tf2::Matrix3x3 m(q_tf2);
   double roll, pitch;
   m.getRPY(roll, pitch, current_state_.yaw);
-
-  updateVehicleFrontAxleState();
 }
 
 void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles)
@@ -466,7 +463,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
 //   double desired_speed;
 //   if (!output_path_.x.empty() && !output_path_.y.empty())
 //   {
-//     const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_) + NUM_LOOK_AHEAD_WP;
+//     const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_) + NUM_WP_LOOK_AHEAD;
 //     if (output_path_.x.size() < next_frontlink_wp_id + 2)
 //     {
 //       ROS_INFO("Local Planner: Path is too short. Planner speed = 0.");
@@ -549,7 +546,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   const double dist = fop::distance(lane_.points[start_id].point.x, lane_.points[start_id].point.y, current_state_.x, current_state_.y);
   const double heading_diff = fop::unifyAngleRange(current_state_.yaw - lane_.points[start_id].point.yaw);
 
-  if (dist > DISTANCE_THRESH)
+  if (dist > MAX_DIST_FROM_PATH)
   {
     ROS_WARN("Local Planner: Vehicle's Location Is Too Far From The Target Lane");
     return false;
@@ -808,7 +805,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
     double wp_seperation;
 
     // Check if the separation between adjacent waypoint are permitted
-    if (!output_path_.x.empty())
+    if (!output_path_.x.empty() && !output_path_.y.empty())
     {
       wp_seperation = fop::distance(output_path_.x.back(), output_path_.y.back(), frenet_path.x[i], frenet_path.y[i]);
     }
@@ -832,16 +829,22 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
     // std::cout << "Concatenate round " << i << ": Output Path Size: " << output_path_.x.size() << std::endl;
   }
 
-  // Calculate steering angle
   if (!output_path_.x.empty() && !output_path_.y.empty())
   {
+    // Calculate steering angle
+    updateVehicleFrontAxleState();
     const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, output_path_);
-    ROS_INFO("Local Planner: Stanley Start");
-
-    // If steering angle is an error value, publish nothing
-    if (!calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
+    // Calculate Control Outputs
+    if (calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
+    {
+      // Publish steering angle
+      publishVehicleCmd(acceleration_, steering_angle_);
+    }
+    else
     {
       ROS_ERROR("Local Planner: No output steering angle");
+      // Publish empty control output
+      publishVehicleCmd(0.0, 0.0);
     }
 
     const int next_wp_id = fop::nextWaypoint(current_state_, output_path_);
@@ -862,7 +865,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
 // Steering Help Function
 bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state)
 {
-  const double wp_id = next_wp_id + NUM_LOOK_AHEAD_WP;
+  const double wp_id = next_wp_id + NUM_WP_LOOK_AHEAD;
   // std::cout << "Output Path Size: " << output_path_.x.size() << " Next Waypoint ID: " << wp_id << std::endl;
 
   // If the current path is too short, return error value
@@ -883,13 +886,14 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
     // if two waypoints overlapped, return error value
     if (c <= WP_MIN_SEP)
     {
+      ROS_WARN("Local Planner: two points overlapped, Regenerate");
       regenerate_flag_ = true;
       return false;
     }
     const double a = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id], output_path_.y[wp_id]);
     const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, output_path_.x[wp_id+1], output_path_.y[wp_id+1]);
     // if the vehicle is too far from the waypoint, return error value
-    if (a >= WP_MAX_SEP || b >= WP_MAX_SEP)
+    if (a >= MAX_DIST_FROM_PATH || b >= MAX_DIST_FROM_PATH)
     {
       ROS_WARN("Local Planner: Vehicle is too far from the path, Regenerate");
       regenerate_flag_ = true;
