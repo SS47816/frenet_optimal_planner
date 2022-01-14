@@ -74,21 +74,16 @@ public:
     double k_obstacle;          // obstacle cost weight
   };
 
-  // Result Data Type
-  class ResultType
-  {
-  public:
-    // Constructor
-    ResultType(){};
-    // Destructor
-    virtual ~ResultType(){};
-
-    std::vector<double> rx;
-    std::vector<double> ry;
-    std::vector<double> ryaw;
-    std::vector<double> rk;
-    fop::Spline2D cubic_spline;
-  };
+  // // Result Data Type
+  // struct ResultType
+  // {
+  // public:
+  //   std::vector<double> rx;
+  //   std::vector<double> ry;
+  //   std::vector<double> ryaw;
+  //   // std::vector<double> rk;
+  //   fop::Spline2D cubic_spline;
+  // };
 
   /* ------------------------ variables (visualization) ----------------------- */
 
@@ -118,37 +113,33 @@ public:
 
   /* Public Functions */
   // Generate reference curve as the frenet s coordinate
-  ResultType generateReferenceCurve(const fop::Lane& lane);
+  std::pair<Path, Spline2D> generateReferenceCurve(const fop::Lane& lane);
 
   // Plan for the optimal trajectory
-  std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline,
-                                                             const fop::FrenetState& frenet_state,
-                                                             double center_offset, double left_width,
-                                                             double right_width,
-                                                             const autoware_msgs::DetectedObjectArray& obstacles,
-                                                             double desired_speed, double current_speed, int path_size);
+  std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline, const fop::FrenetState& frenet_state,
+                                                     double center_offset, double left_width, double right_width,
+                                                     const autoware_msgs::DetectedObjectArray& obstacles,
+                                                     double desired_speed, double current_speed, int path_size);
 
 private:
   Setting settings_;
   SATCollisionChecker sat_collision_checker_instance;
   
-
   /* Private Functions */
   // Sample candidate trajectories
-  std::vector<fop::FrenetPath> generateFrenetPaths(const fop::FrenetState& frenet_state, 
-                                                          double center_offset, double left_bound, double right_bound, 
-                                                          double desired_speed, double current_speed);
+  std::vector<fop::FrenetPath> generateFrenetPaths(const fop::FrenetState& frenet_state, double center_offset, 
+                                                   double left_bound, double right_bound, 
+                                                   double desired_speed, double current_speed);
 
   // Convert paths from frenet frame to gobal map frame
-  std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_paths_list,
-                                                            fop::Spline2D& cubic_spline);
+  std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline);
 
   // Check for collisions and calculate obstacle cost
   bool checkPathCollision(const fop::FrenetPath& frenet_path, const autoware_msgs::DetectedObjectArray& obstacles, const std::string& margin);
 
   // Check for vehicle kinematic constraints
   std::vector<fop::FrenetPath> checkPaths(const std::vector<fop::FrenetPath>& frenet_paths_list,
-                                                  const autoware_msgs::DetectedObjectArray& obstacles, int path_size);
+                                          const autoware_msgs::DetectedObjectArray& obstacles, int path_size);
 
   // Select the best paths for each lane option
   std::vector<fop::FrenetPath> findBestPaths(const std::vector<fop::FrenetPath>& frenet_paths_list);

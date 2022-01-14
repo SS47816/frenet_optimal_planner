@@ -43,9 +43,9 @@ class FrenetPath
 {
  public:
   // Constructor
-  FrenetPath(){};
+  FrenetPath() {};
   // Destructor
-  virtual ~FrenetPath(){};
+  virtual ~FrenetPath() {};
 
   int lane_id;
   // time list
@@ -71,9 +71,9 @@ class FrenetPath
   double cs = 0.0;
   double cf = 0.0;
   // path speed
-  double speed;
+  // double speed;
   // curvature check
-  bool curvature_check;	
+  bool curvature_check;
 };
 
 // Convert the position in Cartesian coordinates to Frenet frame

@@ -64,7 +64,6 @@ FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
     state.d *= -1;
   }
   
-
   // calculate s value
   state.s = 0;
   for (int i = 0; i < prev_wp_id; i++)

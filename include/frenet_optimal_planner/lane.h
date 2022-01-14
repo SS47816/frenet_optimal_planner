@@ -42,26 +42,26 @@ enum LaneID
 struct Waypoint
 {
  public:
-  double x, y, yaw, s;
-  
   Waypoint();
   Waypoint(const double x, const double y, const double yaw);
   Waypoint(const double x, const double y, const double yaw, const double s);
   Waypoint(const tf::Pose& pose);
   Waypoint(const geometry_msgs::Pose& pose_msg);
   Waypoint(const geometry_msgs::Pose& pose_msg, const double s);
+
+  double x, y, yaw, s;
 };
 
 struct LanePoint
 {
  public:
-  double left_width, right_width;
-  double far_left_width, far_right_width;
-  Waypoint point;
-  
   LanePoint();
   LanePoint(const Waypoint& point, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   LanePoint(const geometry_msgs::Pose& pose, const double left_width, const double right_width, const double far_left_width, const double far_right_width, const double s);
+  
+  double left_width, right_width;
+  double far_left_width, far_right_width;
+  Waypoint point;
 };
   
 class Lane
@@ -73,23 +73,10 @@ class Lane
   Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   // Destructor
   virtual ~Lane() {};
-
-  std::vector<LanePoint> points;
-  // std::vector<double> x;
-  // std::vector<double> y;
-  // std::vector<double> yaw;
-  // std::vector<double> dx;
-  // std::vector<double> dy;
-  // std::vector<double> s;
-  // std::vector<tf::Pose> poses;
-  // std::vector<double> left_widths;
-  // std::vector<double> right_widths;
-  // std::vector<double> far_left_widths;
-  // std::vector<double> far_right_widths;
-  // std::vector<int> special_points;
-
   // Clear all contents
   void clear();
+
+  std::vector<LanePoint> points;
 };
 
 class Path
@@ -99,13 +86,13 @@ class Path
   Path(){};
   // Destructor
   virtual ~Path(){};
+  // Clear all contents
+  void clear();
 
   std::vector<double> x;
   std::vector<double> y;
   std::vector<double> yaw;
-
-  // Clear all contents
-  void clear();
+  std::vector<double> v;
 };
 
 // Find the ID of the closest waypoint wrt current x, y position

@@ -103,18 +103,11 @@ private:
   ros::Subscriber odom_sub;
   ros::Subscriber lane_info_sub;
   ros::Subscriber obstacles_sub;
-  // ros::Subscriber behaviour_sub;
-  // ros::Subscriber cmd_sub;
-  // ros::Subscriber ref_speed_sub;
-  // ros::Subscriber current_steering_angle_sub;
-  // ros::Subscriber special_waypoint_sub;
 
   ros::Publisher output_path_pub;
   ros::Publisher next_path_pub;
   ros::Publisher ref_path_pub;
   ros::Publisher vehicle_cmd_pub;
-  // ros::Publisher turn_signal_pub;
-  // ros::Publisher planner_target_speed_pub;
   ros::Publisher candidate_paths_pub;
 
   // timer
@@ -136,11 +129,6 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles);
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
-  // void laneInfoCallback(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
-  // void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
-  // void collisionSpeedCallback(const std_msgs::Float64::ConstPtr& min_speed_msg);
-  // void currSteeringAngleCallback(const std_msgs::Float64::ConstPtr& curr_steering_angle_msg);
-  // void specialWaypointCallback(const frenet_optimal_planner::SpecialWaypointArray special_waypoint_msg);
 
   // Functions fo publishing results
   void publishEmptyPaths();
@@ -148,8 +136,6 @@ private:
   void publishOutputPath(const fop::Path& path);
   void publishNextPath(const fop::FrenetPath& frenet_path);
   void publishVehicleCmd(const double accel, const double angle);
-  // void publishTurnSignal(const fop::FrenetPath& best_path, const bool change_lane, const double yaw_thresh);
-  // void publishPlannerSpeed(const double speed);
   void publishCandidatePaths();
 
   // Odom Helper Function
@@ -169,8 +155,7 @@ private:
   // Stanley Steeing Functions
   bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
-  autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
-                                                     const geometry_msgs::TransformStamped& transform_stamped);
+  autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input, const geometry_msgs::TransformStamped& transform_stamped);
 };
 
 } // namespace fop

@@ -1,9 +1,9 @@
 /* frenet_optimal_trajectory_planner.cc
 
-    Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
+  Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
 
-    Implementation of Optimal trajectory planning in Frenet Coordinate Algorithm
-    Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
+  Implementation of Optimal trajectory planning in Frenet Coordinate Algorithm
+  Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
 */
 
 #include "frenet_optimal_trajectory_planner.h"
@@ -16,27 +16,28 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTraj
   this->settings_ = settings;
 }
 
-FrenetOptimalTrajectoryPlanner::ResultType FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
+std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
 {
-  FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
-  result.cubic_spline = fop::Spline2D(lane);
+  // FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
+  Path ref_path = Path();
+  auto cubic_spline = fop::Spline2D(lane);
 
   std::vector<double> s;
-  for (double i = 0; i < result.cubic_spline.s_.back(); i += 0.1)
+  for (double i = 0; i < cubic_spline.s_.back(); i += 0.1)
   {
     s.push_back(i);
   }
 
   for (int i = 0; i < s.size(); i++)
   {
-    fop::VehicleState state = result.cubic_spline.calculatePosition(s[i]);
-    result.rx.push_back(state.x);
-    result.ry.push_back(state.y);
-    result.ryaw.push_back(result.cubic_spline.calculateYaw(s[i]));
-    result.rk.push_back(result.cubic_spline.calculateCurvature(s[i]));
+    fop::VehicleState state = cubic_spline.calculatePosition(s[i]);
+    ref_path.x.push_back(state.x);
+    ref_path.y.push_back(state.y);
+    ref_path.yaw.push_back(cubic_spline.calculateYaw(s[i]));
+    // result.rk.push_back(result.cubic_spline.calculateCurvature(s[i]));
   }
 
-  return result;
+  return std::pair<Path, Spline2D>{ref_path, cubic_spline};
 }
 
 std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(
@@ -67,9 +68,8 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::frenetOptimalPlanni
   return best_path_list;
 }
 
-std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(
-    const fop::FrenetState& frenet_state, double center_offset, double left_bound, double right_bound,
-    double desired_speed, double current_speed)
+std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(const fop::FrenetState& frenet_state, double center_offset, 
+  double left_bound, double right_bound, double desired_speed, double current_speed)
 {
   // list of frenet paths generated
   std::vector<fop::FrenetPath> frenet_paths;
@@ -80,8 +80,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
   {
     goal_ds.push_back(d);
   }
-  for (double d = 0.0 + center_offset - settings_.delta_width; d >= right_bound;
-       d -= settings_.delta_width)  // right being negative
+  for (double d = 0.0 + center_offset - settings_.delta_width; d >= right_bound; d -= settings_.delta_width)  // right being negative
   {
     goal_ds.push_back(d);
   }
@@ -205,7 +204,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         target_frenet_path.cf = settings_.k_lateral * target_frenet_path.cd + settings_.k_longitudinal * target_frenet_path.cs;
 
         //! Assign the speed of the path
-        target_frenet_path.speed = sample_speed;
+        // target_frenet_path.speed = sample_speed;
 
         //! Initialize curvature check safe before check
         target_frenet_path.curvature_check = true;
@@ -218,8 +217,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
   return frenet_paths;
 }
 
-std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(
-    std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline)
+std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline)
 {
   for (int i = 0; i < frenet_paths_list.size(); i++)
   {
@@ -537,8 +535,7 @@ FrenetOptimalTrajectoryPlanner::findBestPaths(const std::vector<fop::FrenetPath>
   return best_path_list;
 }
 
-fop::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(
-    const std::vector<fop::FrenetPath>& frenet_paths_list, int target_lane_id)
+fop::FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(const std::vector<fop::FrenetPath>& frenet_paths_list, int target_lane_id)
 {
   // if best paths list isn't empty
   if (!frenet_paths_list.empty())

@@ -50,23 +50,6 @@ LanePoint::LanePoint(const geometry_msgs::Pose& pose, const double left_width, c
   this->point = Waypoint(pose, s);
 }
 
-
-// Lane::Lane(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info)
-// {
-//   for (auto& waypoint : lane_info->waypoints)
-//   {
-//     this->x.emplace_back(waypoint.x);
-//     this->y.emplace_back(waypoint.y);
-//     this->dx.emplace_back(waypoint.dx);
-//     this->dy.emplace_back(waypoint.dy);
-//     // this->s.emplace_back(waypoint.s);
-//     this->left_widths.emplace_back(waypoint.left_width);
-//     this->right_widths.emplace_back(waypoint.right_width);
-//     this->far_right_widths.emplace_back(waypoint.far_right_width);
-//     this->special_points.emplace_back(waypoint.special_point);
-//   }
-// }
-
 Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width)
 {
   double s_total = 0.0;
@@ -80,16 +63,6 @@ Lane::Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, co
       this->points.emplace_back(LanePoint(ref_path->poses[i].pose, left_width, right_width, far_left_width, far_right_width, s_total));
     }
   }
-  
-  // for (auto& ref_pose : ref_path->poses)
-  // {
-  //   this->points.emplace_back(LanePoint(ref_pose.pose, left_width, right_width, far_left_width, far_right_width));
-  //   // this->left_widths.emplace_back(lane_width/2);
-  //   // this->right_widths.emplace_back(lane_width/2);
-  //   // this->far_left_widths.emplace_back(lane_width/2 + left_lane_width);
-  //   // this->far_right_widths.emplace_back(lane_width/2 + right_lane_width);
-  //   // this->special_points.emplace_back(waypoint.special_point);
-  // }
 }
 
 void Lane::clear()
@@ -102,6 +75,7 @@ void Path::clear()
   x.clear();
   y.clear();
   yaw.clear();
+  v.clear();
 }
 
 int closestWaypoint(VehicleState current_state, const Path& path)
