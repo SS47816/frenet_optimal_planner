@@ -59,7 +59,6 @@ class FrenetOptimalPlannerNode
 public:
   // Constructor
   FrenetOptimalPlannerNode();
-
   // Destructor
   virtual ~FrenetOptimalPlannerNode(){};
 
@@ -73,7 +72,6 @@ private:
   // Lane related variables
   int current_lane_;
   int target_lane_;
-  int turn_signal_;                    // turn indicator signal, 1 = turn left, -1 = turn right, 0 = not turning
 
   // Control outputs
   double acceleration_;
@@ -91,8 +89,7 @@ private:
   fop::Lane local_lane_;                // Selected Waypoints
   fop::Path ref_spline_;                // Reference Spline
   fop::Path output_path_;               // Output Path
-  std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre. roi
-                                        //= region of interest
+  std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
   
   // Controllers
   control::PID pid_;
@@ -131,7 +128,7 @@ private:
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
 
   // Functions fo publishing results
-  void publishEmptyPaths();
+  void publishEmptyPathsAndStop();
   void publishRefSpline(const fop::Path& path);
   void publishOutputPath(const fop::Path& path);
   void publishNextPath(const fop::FrenetPath& frenet_path);

@@ -52,7 +52,6 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // Hyperparameters for output path
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
-  // REF_SPLINE_LENGTH = config.ref_spline_length;
   REF_SPEED = fop::kph2mps(config.ref_speed);
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::width();
@@ -146,8 +145,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 
   // Initializing states
   regenerate_flag_ = false;
-  turn_signal_ = 0;
-  target_lane_ = LaneID::CURR_LANE;
+  target_lane_ = LaneID::ALL_LANES;
   timer = nh.createTimer(ros::Duration(1.0/planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
   pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
@@ -159,7 +157,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   if (obstacles.objects.size() == 0)
   {
     ROS_WARN("Local Planner: No obstacles received");
-    // publishEmptyPaths();
+    // publishEmptyPathsAndStop();
     // return;
   }
   if (SETTINGS_UPDATED)
@@ -174,7 +172,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   if (!feedWaypoints())
   {
     ROS_WARN("Local Planner: Waiting for Waypoints");
-    publishEmptyPaths();
+    publishEmptyPathsAndStop();
     return;
   }
 
@@ -184,20 +182,15 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   auto ref_path_and_curve = frenet_planner_.generateReferenceCurve(local_lane_);
   // Store the results into reference spline
   ref_spline_ = std::move(ref_path_and_curve.first);
-  // ref_spline_.x = result.rx;
-  // ref_spline_.y = result.ry;
-  // ref_spline_.yaw = result.ryaw;
 
   if (ref_spline_.x.empty())
   {
-    ROS_ERROR("Local Planner: Reference Curve Is Empty, No Path Generated");
-    publishEmptyPaths();
+    ROS_ERROR("Local Planner: Reference Curve could not be be generated, No path generated");
+    publishEmptyPathsAndStop();
     return;
   }
   publishRefSpline(ref_spline_);  // publish to RVIZ for visualisation
   ROS_INFO("Local Planner: Reference Curve Generated");
-
-  target_lane_ = LaneID::ALL_LANES;  //! Sample both lanes
 
   // Define ROI width for path sampling
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
@@ -406,12 +399,13 @@ void FrenetOptimalPlannerNode::publishCandidatePaths()
 }
 
 // Publish empty paths (for Rviz only)
-void FrenetOptimalPlannerNode::publishEmptyPaths()
+void FrenetOptimalPlannerNode::publishEmptyPathsAndStop()
 {
   // Publish empty paths
   publishRefSpline(fop::Path());
   publishOutputPath(fop::Path());
   publishNextPath(fop::FrenetPath());
+  publishVehicleCmd(-1.0, 0.0);
 }
 
 // Update the vehicle front axle state (used in odomcallback)

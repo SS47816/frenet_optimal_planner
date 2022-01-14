@@ -34,7 +34,6 @@ std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve
     ref_path.x.push_back(state.x);
     ref_path.y.push_back(state.y);
     ref_path.yaw.push_back(cubic_spline.calculateYaw(s[i]));
-    // result.rk.push_back(result.cubic_spline.calculateCurvature(s[i]));
   }
 
   return std::pair<Path, Spline2D>{ref_path, cubic_spline};
@@ -85,7 +84,6 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
     goal_ds.push_back(d);
   }
 
-  // for (double goal_d = right_bound; goal_d <= left_bound; goal_d += settings_.delta_width)
   for (auto goal_d : goal_ds)
   {
     // generate d_t polynomials
