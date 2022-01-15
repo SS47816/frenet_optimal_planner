@@ -14,36 +14,30 @@ namespace fop
 // FrenetOptimalTrajectoryPlanner settings
 FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanner::Setting();
 
-// Vehicle Parameters
-const double L = fop::Vehicle::L();  // Wheelbase length, back wheel to front wheel
-const double MAX_STEERING_ANGLE = fop::Vehicle::max_steering_angle();  // Maximum steering angle [rad]
-
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
 const double WP_MIN_SEP = 0.01;                                   // Minimum allowable waypoint separation
 const double HEADING_DIFF_THRESH = M_PI/2;                        // Maximum allowed heading diff between vehicle and path
 const double MAX_DIST_FROM_PATH = 10.0;                           // Maximum allowed distance between vehicle and path
-const double MIN_PLANNING_SPEED = 1.0;                            // Minimum allowed vehicle speed for planning
 
 /* List of dynamic parameters */
 // Hyperparameters for output path
 double OUTPUT_PATH_MAX_SIZE;  // Maximum size of the output path
 double OUTPUT_PATH_MIN_SIZE;  // Minimum size of the output path
-// double REF_SPEED;
+
 // Control Parameters
 double PID_Kp, PID_Ki, PID_Kd;
 // Stanley gains
 int NUM_WP_LOOK_AHEAD;        // Number of waypoints to look ahead for Stanley
 double STANLEY_OVERALL_GAIN;  // Stanley overall gain
 double TRACK_ERROR_GAIN;      // Cross track error gain
-// Turn signal thresholds
-double TURN_YAW_THRESH;       // Yaw difference threshold
+
 // Safety margins for collision check
 double LANE_WIDTH;
 double LEFT_LANE_WIDTH;       // Maximum left road width [m]
 double RIGHT_LANE_WIDTH;      // Maximum right road width [m]
 // double NARROW_PATH_OFFSET = -0.3;
-// double REGENERATE_BRAKE_THRESHOLD;
+
 bool SETTINGS_UPDATED = false;
 
 // Dynamic parameter server callback function
@@ -52,7 +46,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // Hyperparameters for output path
   OUTPUT_PATH_MAX_SIZE = config.output_path_max_size;
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
-  // REF_SPEED = fop::kph2mps(config.ref_speed);
+
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::width();
   SETTINGS.vehicle_length = fop::Vehicle::length();
@@ -91,10 +85,6 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_lateral = config.k_lateral;
   SETTINGS.k_longitudinal = config.k_longitudinal;
   SETTINGS.k_obstacle = config.k_obstacle;
-  // Turn signal thresholds
-  TURN_YAW_THRESH = config.turn_yaw_thresh;
-
-  // REGENERATE_BRAKE_THRESHOLD = config.regenerate_brake_threshold;
 
   SETTINGS_UPDATED = true;
 }
@@ -545,7 +535,7 @@ void FrenetOptimalPlannerNode::updateStartState()
   }
 
   // Ensure the speed is above the minimum planning speed
-  start_state_.s_d = std::max(start_state_.s_d, MIN_PLANNING_SPEED);
+  // start_state_.s_d = std::max(start_state_.s_d, 1.0);
 
   // Update current lane
   if (std::abs(start_state_.d) <= LANE_WIDTH/2)
@@ -677,8 +667,6 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
     best_path = fop::FrenetPath();
   }
 
-  // publishTurnSignal(best_path, change_lane_flag, TURN_YAW_THRESH);
-
   return best_path;
 }
 
@@ -803,7 +791,7 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
     // Final Angle
     steering_angle_ = STANLEY_OVERALL_GAIN * (delta_yaw + direction * atan(TRACK_ERROR_GAIN * x / u));
     // Check if exceeding max steering angle
-    steering_angle_ = fop::limitWithinRange(steering_angle_, -MAX_STEERING_ANGLE, MAX_STEERING_ANGLE);
+    steering_angle_ = fop::limitWithinRange(steering_angle_, -fop::Vehicle::max_steering_angle(), fop::Vehicle::max_steering_angle());
 
     // Calculate accelerator output
     acceleration_ = pid_.calculate(output_path_.v[wp_id], current_state_.v);

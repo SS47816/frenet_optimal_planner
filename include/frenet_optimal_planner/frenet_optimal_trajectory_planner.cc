@@ -25,15 +25,15 @@ std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve
   std::vector<double> s;
   for (double i = 0; i < cubic_spline.s_.back(); i += 0.1)
   {
-    s.push_back(i);
+    s.emplace_back(i);
   }
 
   for (int i = 0; i < s.size(); i++)
   {
     fop::VehicleState state = cubic_spline.calculatePosition(s[i]);
-    ref_path.x.push_back(state.x);
-    ref_path.y.push_back(state.y);
-    ref_path.yaw.push_back(cubic_spline.calculateYaw(s[i]));
+    ref_path.x.emplace_back(state.x);
+    ref_path.y.emplace_back(state.y);
+    ref_path.yaw.emplace_back(cubic_spline.calculateYaw(s[i]));
   }
 
   return std::pair<Path, Spline2D>{ref_path, cubic_spline};
@@ -117,15 +117,15 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
 
       // start lateral state [d, d_d, d_dd]
       std::vector<double> start_d;
-      start_d.push_back(frenet_state.d);
-      start_d.push_back(frenet_state.d_d);
-      start_d.push_back(frenet_state.d_dd);
+      start_d.emplace_back(frenet_state.d);
+      start_d.emplace_back(frenet_state.d_d);
+      start_d.emplace_back(frenet_state.d_dd);
 
       // end lateral state [d, d_d, d_dd]
       std::vector<double> end_d;
-      end_d.push_back(goal_d);
-      end_d.push_back(0.0);
-      end_d.push_back(0.0);
+      end_d.emplace_back(goal_d);
+      end_d.emplace_back(0.0);
+      end_d.emplace_back(0.0);
 
       // generate lateral quintic polynomial
       fop::QuinticPolynomial lateral_quintic_poly = fop::QuinticPolynomial(start_d, end_d, T);
@@ -133,11 +133,11 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
       // store the this lateral trajectory into frenet_path
       for (double t = 0.0; t <= T; t += settings_.tick_t)
       {
-        frenet_path.t.push_back(t);
-        frenet_path.d.push_back(lateral_quintic_poly.calculatePoint(t));
-        frenet_path.d_d.push_back(lateral_quintic_poly.calculateFirstDerivative(t));
-        frenet_path.d_dd.push_back(lateral_quintic_poly.calculateSecondDerivative(t));
-        frenet_path.d_ddd.push_back(lateral_quintic_poly.calculateThirdDerivative(t));
+        frenet_path.t.emplace_back(t);
+        frenet_path.d.emplace_back(lateral_quintic_poly.calculatePoint(t));
+        frenet_path.d_d.emplace_back(lateral_quintic_poly.calculateFirstDerivative(t));
+        frenet_path.d_dd.emplace_back(lateral_quintic_poly.calculateSecondDerivative(t));
+        frenet_path.d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
       }
 
       // generate longitudinal quartic polynomial
@@ -156,14 +156,14 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
 
         // start longitudinal state [s, s_d, s_dd]
         std::vector<double> start_s;
-        start_s.push_back(frenet_state.s);
-        start_s.push_back(frenet_state.s_d);
-        start_s.push_back(0.0);
+        start_s.emplace_back(frenet_state.s);
+        start_s.emplace_back(frenet_state.s_d);
+        start_s.emplace_back(0.0);
 
         // end longitudinal state [s_d, s_dd]
         std::vector<double> end_s;
-        end_s.push_back(sample_speed);
-        end_s.push_back(0.0);
+        end_s.emplace_back(sample_speed);
+        end_s.emplace_back(0.0);
 
         // generate longitudinal quartic polynomial
         fop::QuarticPolynomial longitudinal_quartic_poly = fop::QuarticPolynomial(start_s, end_s, T);
@@ -171,10 +171,10 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         // store the this longitudinal trajectory into target_frenet_path
         for (double t = 0.0; t <= T; t += settings_.tick_t)
         {
-          target_frenet_path.s.push_back(longitudinal_quartic_poly.calculatePoint(t));
-          target_frenet_path.s_d.push_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
-          target_frenet_path.s_dd.push_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
-          target_frenet_path.s_ddd.push_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
+          target_frenet_path.s.emplace_back(longitudinal_quartic_poly.calculatePoint(t));
+          target_frenet_path.s_d.emplace_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
+          target_frenet_path.s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
+          target_frenet_path.s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
         }
 
         // calculate the costs
@@ -207,7 +207,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
         //! Initialize curvature check safe before check
         target_frenet_path.curvature_check = true;
 
-        frenet_paths.push_back(target_frenet_path);
+        frenet_paths.emplace_back(target_frenet_path);
       }
     }
   }
@@ -228,30 +228,29 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
       // std::cout << "Break 1.2" << std::endl;
       double i_yaw = cubic_spline.calculateYaw(frenet_paths_list[i].s[j]);
       // std::cout << "Break 1.3" << std::endl;
-      double di = frenet_paths_list[i].d[j];
-      double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
-      double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
-      frenet_paths_list[i].x.push_back(frenet_x);
-      frenet_paths_list[i].y.push_back(frenet_y);
+      const double di = frenet_paths_list[i].d[j];
+      const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
+      const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
+      frenet_paths_list[i].x.emplace_back(frenet_x);
+      frenet_paths_list[i].y.emplace_back(frenet_y);
     }
     // calculate yaw and ds
     for (int j = 0; j < frenet_paths_list[i].x.size() - 1; j++)
     {
-      double dx = frenet_paths_list[i].x[j+1] - frenet_paths_list[i].x[j];
-      double dy = frenet_paths_list[i].y[j+1] - frenet_paths_list[i].y[j];
-      frenet_paths_list[i].yaw.push_back(atan2(dy, dx));
-      frenet_paths_list[i].ds.push_back(sqrt(dx * dx + dy * dy));
+      const double dx = frenet_paths_list[i].x[j+1] - frenet_paths_list[i].x[j];
+      const double dy = frenet_paths_list[i].y[j+1] - frenet_paths_list[i].y[j];
+      frenet_paths_list[i].yaw.emplace_back(atan2(dy, dx));
+      frenet_paths_list[i].ds.emplace_back(sqrt(dx * dx + dy * dy));
     }
 
-    frenet_paths_list[i].yaw.push_back(frenet_paths_list[i].yaw.back());
-    frenet_paths_list[i].ds.push_back(frenet_paths_list[i].ds.back());
+    frenet_paths_list[i].yaw.emplace_back(frenet_paths_list[i].yaw.back());
+    frenet_paths_list[i].ds.emplace_back(frenet_paths_list[i].ds.back());
 
     // calculate curvature
     for (int j = 0; j < frenet_paths_list[i].yaw.size() - 1; j++)
     {
-      double yaw_diff = frenet_paths_list[i].yaw[j+1] - frenet_paths_list[i].yaw[j];
-      yaw_diff = fop::unifyAngleRange(yaw_diff);
-      frenet_paths_list[i].c.push_back(yaw_diff / frenet_paths_list[i].ds[j]);
+      double yaw_diff = fop::unifyAngleRange(frenet_paths_list[i].yaw[j+1] - frenet_paths_list[i].yaw[j]);
+      frenet_paths_list[i].c.emplace_back(yaw_diff / frenet_paths_list[i].ds[j]);
     }
   }
 
@@ -396,17 +395,17 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       // if (frenet_path.curvature_check)
       if (curvature_passed)
       {
-        passed_constraints_paths.push_back(frenet_path);
+        passed_constraints_paths.emplace_back(frenet_path);
       }
       else
       {
-        backup_paths.push_back(frenet_path);
-        backup_unchecked_paths.push_back(frenet_path);
+        backup_paths.emplace_back(frenet_path);
+        backup_unchecked_paths.emplace_back(frenet_path);
       }
     }
     else
     {
-      unsafe_paths.push_back(frenet_path);
+      unsafe_paths.emplace_back(frenet_path);
     }
   }
   std::cout << "Constraints Checked for all Paths, Starting Collision Checking..." << std::endl;
@@ -429,11 +428,11 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
     // if (collision_checks[i].get() == false)
     if (collision_checks[i] == false)
     {
-      unsafe_paths.push_back(passed_constraints_paths[i]);
+      unsafe_paths.emplace_back(passed_constraints_paths[i]);
     }
     else
     {
-      safe_paths.push_back(passed_constraints_paths[i]);
+      safe_paths.emplace_back(passed_constraints_paths[i]);
     }
   }
 
@@ -525,10 +524,9 @@ std::vector<fop::FrenetPath>
 FrenetOptimalTrajectoryPlanner::findBestPaths(const std::vector<fop::FrenetPath>& frenet_paths_list)
 {
   std::vector<fop::FrenetPath> best_path_list;
-  best_path_list.push_back(findBestPath(frenet_paths_list, 0));  // transition area
-  best_path_list.push_back(findBestPath(frenet_paths_list, 1));  // left lane
-
-  best_path_list.push_back(findBestPath(frenet_paths_list, 2));  // right lane
+  best_path_list.emplace_back(findBestPath(frenet_paths_list, 0));  // transition area
+  best_path_list.emplace_back(findBestPath(frenet_paths_list, 1));  // left lane
+  best_path_list.emplace_back(findBestPath(frenet_paths_list, 2));  // right lane
 
   return best_path_list;
 }
