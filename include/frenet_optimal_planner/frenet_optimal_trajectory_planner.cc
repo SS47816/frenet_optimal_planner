@@ -383,7 +383,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       {
         if (j > 0 && j < path_size)
         {
-          if (fabs(frenet_path.c[j] - frenet_path.c[j-1]) > fop::Vehicle::max_curvature(settings_.tick_t))
+          if (std::abs(frenet_path.c[j] - frenet_path.c[j-1]) > fop::Vehicle::max_curvature(settings_.tick_t))
           {
             // frenet_path.curvature_check = false;
             std::cout << "Exceeded max curvature = " << fop::Vehicle::max_curvature(settings_.tick_t) 

@@ -41,11 +41,11 @@ double unifyAngleRange(const double angle)
 }
 
 // Limit the value within [lower_bound, upper_bound]
-double limitWithinRange(double value, const double lower_bound, const double upper_bound)
+double limitWithinRange(const double value, const double lower_bound, const double upper_bound)
 {
-  value = std::max(value, lower_bound);
-  value = std::min(value, upper_bound);
-  return value;
+  auto new_value = std::max(value, lower_bound);
+  new_value = std::min(new_value, upper_bound);
+  return new_value;
 }
 
 // Calculate the Euclideam distance between two points

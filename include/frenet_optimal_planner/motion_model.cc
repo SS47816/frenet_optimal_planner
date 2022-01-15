@@ -21,8 +21,8 @@ VehicleState getNextKinematicModelState(const VehicleState &state, const Actuato
   const double v = state.v;
 
   // actuators inputs [delta, a]
-  const double delta = actuators.delta;
-  const double a = actuators.a;
+  const double delta = actuators.angle;
+  const double a = actuators.accel;
 
   /** Equations for the bicycle vehicle kinematic model:
    * x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt

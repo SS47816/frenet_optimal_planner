@@ -76,12 +76,13 @@ private:
   // Control outputs
   double acceleration_;
   double steering_angle_;
-  double current_steering_angle_;
-  double ref_speed_ = kph2mps(30);
+  // ActuatorState actuator_state_;
 
   // Vehicle's current state
   fop::VehicleState current_state_;    // State of the vehicle baselink
   fop::VehicleState frontaxle_state_;  // State of the vehicle frontaxle
+
+  // Trajectory Sampling States
   fop::FrenetState start_state_;       // Starting States for sampling
   
   // Maps and Paths
