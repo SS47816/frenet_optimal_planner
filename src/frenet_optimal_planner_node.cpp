@@ -345,7 +345,7 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
 void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_path)
 {
   //! For testing and visualization
-  ROS_INFO("path size: %d", (int)frenet_path.c.size());
+  // ROS_INFO("path size: %d", (int)frenet_path.c.size());
 
   nav_msgs::Path output_path_msg;
   output_path_msg.header.stamp = ros::Time::now();
@@ -419,7 +419,8 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   // if reached the end of the lane, stop
   if (start_id >= lane_.points.size() - 2)  // exclude last 2 waypoints for safety, and prevent code crashing
   {
-    ROS_WARN("Local Planner: Vehicle is at waypoint no.%d, with %d waypoints in total", start_id, int(lane_.points.size()));
+    // ROS_WARN("Local Planner: Vehicle is at waypoint no.%d, with %d waypoints in total", start_id, int(lane_.points.size()));
+    ROS_WARN("Local Planner: Vehicle has reached the destination");
     return false;
   }
 
@@ -447,7 +448,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   }
 
   // Check if the global waypoints need to be filtered
-  const double ref_spline_length = SETTINGS.target_speed*(SETTINGS.max_t + 2.0);
+  const double ref_spline_length = SETTINGS.target_speed*(2*SETTINGS.max_t);
   if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= ref_spline_length)
   {
     // Filter the waypoints to a uniform density
