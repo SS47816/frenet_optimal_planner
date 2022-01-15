@@ -24,7 +24,6 @@ struct VehicleState
 
   double x;
   double y;
-  double z;
   double yaw;  // yaw
   double v;    // velocity
 };

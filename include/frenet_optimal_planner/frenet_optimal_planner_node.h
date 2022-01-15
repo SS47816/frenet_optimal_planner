@@ -72,6 +72,7 @@ private:
   // Lane related variables
   int current_lane_;
   int target_lane_;
+  double map_height_;
 
   // Control outputs
   double acceleration_;
