@@ -94,8 +94,6 @@ private:
   // Controllers
   control::PID pid_;
 
-  ros::NodeHandle nh;
-
   // subscriber and publishers
   ros::Subscriber odom_sub;
   ros::Subscriber lane_info_sub;
@@ -107,7 +105,8 @@ private:
   ros::Publisher vehicle_cmd_pub;
   ros::Publisher candidate_paths_pub;
 
-  // timer
+  // ROS
+  ros::NodeHandle nh;
   ros::Timer timer;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;

@@ -351,7 +351,7 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
     {
       ROS_WARN("Inf value in output path point no.%d", int(i));
     }
-    pose.pose.position.z = 1.0;
+    pose.pose.position.z = path.v[i]/fop::Vehicle::max_speed();
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
@@ -375,7 +375,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
     pose.header = output_path_msg.header;
     pose.pose.position.x = frenet_path.x[i];
     pose.pose.position.y = frenet_path.y[i];
-    pose.pose.position.z = 1.0;
+    pose.pose.position.z = std::hypot(frenet_path.s_d[i], frenet_path.d_d[i])/fop::Vehicle::max_speed();
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(frenet_path.yaw[i]);
     output_path_msg.poses.emplace_back(pose);
   }
@@ -723,6 +723,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
     output_path_.x.push_back(frenet_path.x[i]);
     output_path_.y.push_back(frenet_path.y[i]);
     output_path_.yaw.push_back(frenet_path.yaw[i]);
+    output_path_.v.push_back(std::hypot(frenet_path.s_d[i], frenet_path.d_d[i]));
 
     // std::cout << "Concatenate round " << i << ": Output Path Size: " << output_path_.x.size() << std::endl;
   }
@@ -764,7 +765,6 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
 bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state)
 {
   const double wp_id = next_wp_id + NUM_WP_LOOK_AHEAD;
-  // std::cout << "Output Path Size: " << output_path_.x.size() << " Next Waypoint ID: " << wp_id << std::endl;
 
   // If the current path is too short, return error value
   if (output_path_.x.size() < wp_id + 2)
@@ -814,9 +814,9 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
     steering_angle_ = fop::limitWithinRange(steering_angle_, -MAX_STEERING_ANGLE, MAX_STEERING_ANGLE);
 
     // Calculate accelerator output
-    acceleration_ = pid_.calculate(REF_SPEED, current_state_.v);
+    acceleration_ = pid_.calculate(output_path_.v[wp_id], current_state_.v);
 
-    ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", REF_SPEED, current_state_.v, acceleration_);
+    ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", output_path_.v[wp_id], current_state_.v, acceleration_);
     ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, fop::rad2deg(delta_yaw), fop::rad2deg(steering_angle_));
     return true;
   }
