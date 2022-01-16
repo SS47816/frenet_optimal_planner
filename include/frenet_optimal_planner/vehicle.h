@@ -15,24 +15,24 @@ enum LINK_TYPE
 class Vehicle
 {
  public:
-  // double max_speed, max_acceleration, max_deceleration;
-  // double max_steering_angle, max_curvature, steering_angle_rate;
-  // double L, Lf, Lr;  // distance between front and rear axles, distance from CoG to front/rear axle
-  // Eigen::Vector2f min_point, max_point;
+  // Physical Bounding Box
+  static Eigen::Vector3d bbox_size();
+  static Eigen::Vector3d bbox_center();
+  static std::vector<Eigen::Vector3d> footprint();
 
-  static double length();
-  static double width();
+  // distance between front and rear axles, distance from CoG to front/rear axle
   static double L();
   static double Lf();
   static double Lr();
 
-  static double max_steering_angle();
+  // Constraints
   static double max_speed();
   static double max_acceleration();
   static double max_deceleration();
-  static double max_curvature(const double delta_t);
-  static double steering_angle_rate();
-
+  static double max_steering_angle();
+  static double max_steering_rate();
+  static double max_curvature_front();
+  static double max_curvature_rear();
 };
 
 }  // namespace fop

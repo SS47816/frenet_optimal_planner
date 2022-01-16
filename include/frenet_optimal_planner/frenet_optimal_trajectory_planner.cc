@@ -231,8 +231,15 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
       const double di = frenet_paths_list[i].d[j];
       const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
       const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
-      frenet_paths_list[i].x.emplace_back(frenet_x);
-      frenet_paths_list[i].y.emplace_back(frenet_y);
+      if (!fop::isLegal(frenet_x) || !fop::isLegal(frenet_y))
+      {
+        break;
+      }
+      else
+      {
+        frenet_paths_list[i].x.emplace_back(frenet_x);
+        frenet_paths_list[i].y.emplace_back(frenet_y);
+      }
     }
     // calculate yaw and ds
     for (int j = 0; j < frenet_paths_list[i].x.size() - 1; j++)
@@ -280,8 +287,8 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
   {
     double cost = 0;
 
-    double buggy_center_x = frenet_path.x[i] + fop::Vehicle::Lf() * cos(frenet_path.yaw[i]);
-    double buggy_center_y = frenet_path.y[i] + fop::Vehicle::Lf() * sin(frenet_path.yaw[i]);
+    double buggy_center_x = frenet_path.x[i] + fop::Vehicle::Lr() * cos(frenet_path.yaw[i]);
+    double buggy_center_y = frenet_path.y[i] + fop::Vehicle::Lr() * sin(frenet_path.yaw[i]);
 
     buggy_rect = sat_collision_checker_instance.construct_rectangle(buggy_center_x, buggy_center_y,
                                                                     frenet_path.yaw[i], settings_.vehicle_length,
@@ -382,10 +389,10 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       {
         if (j > 0 && j < path_size)
         {
-          if (std::abs(frenet_path.c[j] - frenet_path.c[j-1]) > fop::Vehicle::max_curvature(settings_.tick_t))
+          if (std::abs(frenet_path.c[j] - frenet_path.c[j-1]) > settings_.max_curvature)
           {
             // frenet_path.curvature_check = false;
-            std::cout << "Exceeded max curvature = " << fop::Vehicle::max_curvature(settings_.tick_t) 
+            std::cout << "Exceeded max curvature = " << settings_.max_curvature
                       << ". Curr curvature rate = " << (frenet_path.c[j] - frenet_path.c[j-1]) << std::endl;
             break;
           }

@@ -48,8 +48,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   OUTPUT_PATH_MIN_SIZE = config.output_path_min_size;
 
   // Safety constraints
-  SETTINGS.vehicle_width = fop::Vehicle::width();
-  SETTINGS.vehicle_length = fop::Vehicle::length();
+  SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
+  SETTINGS.vehicle_length = fop::Vehicle::bbox_size().x();
   SETTINGS.soft_safety_margin = config.soft_safety_margin;
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
@@ -76,8 +76,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_speed = fop::Vehicle::max_speed();
   SETTINGS.max_accel = fop::Vehicle::max_acceleration();
   SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = fop::Vehicle::max_curvature(config.tick_t);
-  SETTINGS.steering_angle_rate = fop::Vehicle::steering_angle_rate();
+  SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
+  SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
