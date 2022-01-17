@@ -135,7 +135,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 
   // Initializing states
   regenerate_flag_ = false;
-  target_lane_ = LaneID::ALL_LANES;
+  target_lane_ = LaneID::CURR_LANE;
   timer = nh.createTimer(ros::Duration(1.0/planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
   pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
@@ -634,13 +634,13 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
   {
     if (keep_lane_cost <= change_lane_cost)
     {
-      ROS_DEBUG("Local Planner: Keeping Lane");
+      ROS_INFO("Local Planner: Keeping Lane");
       change_lane_flag = false;
       best_path = best_path_list[keep_lane_id];
     }
     else
     {
-      ROS_DEBUG("Local Planner: Changing Lane");
+      ROS_INFO("Local Planner: Changing Lane");
       change_lane_flag = true;
       best_path = best_path_list[change_lane_id];
     }
@@ -648,21 +648,21 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
   // if only keep lane available
   else if (keep_lane_id != -1 && change_lane_id == -1)
   {
-    ROS_DEBUG("Local Planner: Keeping Lane");
+    ROS_INFO("Local Planner: Keeping Lane");
     change_lane_flag = false;
     best_path = best_path_list[keep_lane_id];
   }
   // if only change lane available
   else if (keep_lane_id == -1 && change_lane_id != -1)
   {
-    ROS_DEBUG("Local Planner: Changing Lane");
+    ROS_INFO("Local Planner: Changing Lane");
     change_lane_flag = true;
     best_path = best_path_list[change_lane_id];
   }
   // if none available
   else
   {
-    ROS_DEBUG("Local Planner: No Path Available");
+    ROS_INFO("Local Planner: No Path Available");
     change_lane_flag = false;
     // dummy path
     best_path = fop::FrenetPath();
