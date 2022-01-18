@@ -106,6 +106,7 @@ private:
   ros::Publisher ref_path_pub;
   ros::Publisher vehicle_cmd_pub;
   ros::Publisher candidate_paths_pub;
+  ros::Publisher obstacles_pub;
 
   // ROS
   ros::NodeHandle nh;
@@ -115,7 +116,7 @@ private:
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config>::CallbackType f;
 
-  autoware_msgs::DetectedObjectArray obstacles;
+  autoware_msgs::DetectedObjectArray obstacles_;
   SATCollisionChecker sat_collision_checker_instance;
 
   // ###################################### Private Functions ######################################
@@ -125,7 +126,7 @@ private:
 
   // Functions for subscribing
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
-  void obstaclesCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles);
+  void obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles);
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
 
   // Functions fo publishing results

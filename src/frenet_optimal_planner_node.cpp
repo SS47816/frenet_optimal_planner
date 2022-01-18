@@ -130,8 +130,9 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   output_path_pub = nh.advertise<nav_msgs::Path>(output_path_topic, 1);
   next_path_pub = nh.advertise<nav_msgs::Path>(next_path_topic, 1);
-  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("candidate_paths", 1);
+  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("local_planner/candidate_paths", 1);
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
+  obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
 
   // Initializing states
   regenerate_flag_ = false;
@@ -144,9 +145,9 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_event)
 {
   // Check if all required data are in position
-  if (obstacles.objects.size() == 0)
+  if (obstacles_.objects.size() == 0)
   {
-    ROS_WARN("Local Planner: No obstacles received");
+    ROS_WARN("Local Planner: No obstacles_ received");
     // publishEmptyPathsAndStop();
     // return;
   }
@@ -187,7 +188,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Get the planning result 
   std::vector<fop::FrenetPath> best_path_list = 
     frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, SETTINGS.centre_offset, 
-    roi_boundaries_[0], roi_boundaries_[1], obstacles, SETTINGS.target_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
+    roi_boundaries_[0], roi_boundaries_[1], obstacles_, SETTINGS.target_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
@@ -234,9 +235,11 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   m.getRPY(roll, pitch, current_state_.yaw);
 }
 
-void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::Ptr& input_obstacles)
+void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
 {
-  obstacles.objects.clear();
+  obstacles_.header = input_obstacles->header;
+  obstacles_.header.frame_id = "map";
+  obstacles_.objects.clear();
 
   geometry_msgs::TransformStamped transform_stamped;
   try
@@ -249,48 +252,44 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
     return;
   }
 
-  obstacles.header = input_obstacles->header;
-  obstacles.header.frame_id = "map";
   for (auto const& object : input_obstacles->objects)
   {
-    autoware_msgs::DetectedObject new_object = object;
-    new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
-    obstacles.objects.push_back(transformObjectFrame(new_object, transform_stamped));
-    obstacles.objects.emplace_back(new_object);
+    // autoware_msgs::DetectedObject new_object = object;
+    // new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
+    // obstacles_.objects.push_back(transformObjectFrame(new_object, transform_stamped));
+    // obstacles_.objects.emplace_back(new_object);
+    obstacles_.objects.emplace_back(transformObjectFrame(object, transform_stamped));
   }
+
+  obstacles_pub.publish(obstacles_);
 }
 
 autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
                                                                              const geometry_msgs::TransformStamped& transform_stamped)
 {
-  autoware_msgs::DetectedObject transformed_object;
   geometry_msgs::Polygon transformed_polygon;
-
   for (auto const& point : object_input.convex_hull.polygon.points)
   {
-    geometry_msgs::Vector3 coord_before_transform, coord_after_transform;
+    geometry_msgs::Point coord_before_transform, coord_after_transform;
     coord_before_transform.x = point.x;
     coord_before_transform.y = point.y;
-    coord_before_transform.z = 0;
+    coord_before_transform.z = point.z;
 
-    // rotate the object
     tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
 
     geometry_msgs::Point32 transformed_point;
     transformed_point.x = coord_after_transform.x;
     transformed_point.y = coord_after_transform.y;
-
-    // translate the object
-    transformed_point.x += transform_stamped.transform.translation.x;
-    transformed_point.y += transform_stamped.transform.translation.y;
-    transformed_polygon.points.push_back(transformed_point);
+    transformed_point.z = coord_after_transform.z;
+    transformed_polygon.points.emplace_back(transformed_point);
   }
 
-  transformed_object.convex_hull.polygon = transformed_polygon;
+  autoware_msgs::DetectedObject transformed_object = object_input;
   transformed_object.header = object_input.header;
   transformed_object.header.frame_id = "map";
+  transformed_object.convex_hull.polygon = transformed_polygon;
 
-  return transformed_object;
+  return std::move(transformed_object);
 }
 
 void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)

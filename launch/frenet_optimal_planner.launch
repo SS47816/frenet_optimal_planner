@@ -46,6 +46,9 @@
     <param name="planner_target_speed_topic"    value="local_planner/target_speed"/> -->
   </node>
 
+  <!-- Autoware Object Visualizer -->
+  <node ns="local_planner" pkg="lgsvl_utils" type="detected_objects_visualizer" name="autoware_objects_visualizer" output="log" respawn="true" />
+
   <!-- Dynamic Reconfigure GUI -->
   <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />
 

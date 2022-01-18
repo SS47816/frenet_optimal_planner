@@ -429,7 +429,15 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
   // }
   // std::cout << "Async Collision Checking Done!" << std::endl;
 
-  std::vector<bool> collision_checks(passed_constraints_paths.size(), bool{true});
+  // std::vector<bool> collision_checks(passed_constraints_paths.size(), bool{true});
+
+  std::vector<bool> collision_checks;
+  for (const auto& frenet_path : passed_constraints_paths)
+  {
+    collision_checks.push_back(checkPathCollision(frenet_path, obstacles, "no"));
+  }
+  std::cout << "Collision Checking Done!" << std::endl;
+
   for (int i = 0; i < collision_checks.size(); i++)
   {
     // if (collision_checks[i].get() == false)
@@ -443,7 +451,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
     }
   }
 
-  std::cout << "Fake Collision Checking Done!" << std::endl;
+  std::cout << "True Collision Checking Done!" << std::endl;
 
   //! If there is no available path from passed_constraints_paths, check backup_paths.
   // if (safe_paths.empty())
@@ -515,8 +523,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
   }
   else  // No safe paths
   {
-    std::vector<fop::FrenetPath> dummy_paths;
-    return dummy_paths;
+    return std::vector<fop::FrenetPath>();
   }
 }
 
