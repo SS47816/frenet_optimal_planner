@@ -139,13 +139,15 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   target_lane_ = LaneID::CURR_LANE;
   timer = nh.createTimer(ros::Duration(1.0/planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
   pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
+
+  obstacles_ = boost::make_shared<autoware_msgs::DetectedObjectArray>();
 };
 
 // Local planner main logic
 void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_event)
 {
   // Check if all required data are in position
-  if (obstacles_.objects.size() == 0)
+  if (obstacles_->objects.size() == 0)
   {
     ROS_WARN("Local Planner: No obstacles_ received");
     // publishEmptyPathsAndStop();
@@ -188,7 +190,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   // Get the planning result 
   std::vector<fop::FrenetPath> best_path_list = 
     frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, SETTINGS.centre_offset, 
-    roi_boundaries_[0], roi_boundaries_[1], obstacles_, SETTINGS.target_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
+    roi_boundaries_[0], roi_boundaries_[1], *obstacles_, SETTINGS.target_speed, current_state_.v, OUTPUT_PATH_MAX_SIZE);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
@@ -229,17 +231,16 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
 
   tf2::Quaternion q_tf2(pose_in_map.orientation.x, pose_in_map.orientation.y,
                         pose_in_map.orientation.z, pose_in_map.orientation.w);
-  q_tf2.normalize();
-  tf2::Matrix3x3 m(q_tf2);
+  tf2::Matrix3x3 m(q_tf2.normalize());
   double roll, pitch;
   m.getRPY(roll, pitch, current_state_.yaw);
 }
 
 void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
 {
-  obstacles_.header = input_obstacles->header;
-  obstacles_.header.frame_id = "map";
-  obstacles_.objects.clear();
+  obstacles_->header = input_obstacles->header;
+  obstacles_->header.frame_id = "map";
+  obstacles_->objects.clear();
 
   geometry_msgs::TransformStamped transform_stamped;
   try
@@ -254,21 +255,20 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
 
   for (auto const& object : input_obstacles->objects)
   {
-    // autoware_msgs::DetectedObject new_object = object;
-    // new_object.convex_hull.polygon = sat_collision_checker_instance.remove_top_layer(object.convex_hull.polygon);
-    // obstacles_.objects.push_back(transformObjectFrame(new_object, transform_stamped));
-    // obstacles_.objects.emplace_back(new_object);
-    obstacles_.objects.emplace_back(transformObjectFrame(object, transform_stamped));
+    obstacles_->objects.emplace_back(transformObjectFrame(object, transform_stamped));
   }
 
   obstacles_pub.publish(obstacles_);
 }
 
-autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& object_input,
+autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& input_object,
                                                                              const geometry_msgs::TransformStamped& transform_stamped)
 {
-  geometry_msgs::Polygon transformed_polygon;
-  for (auto const& point : object_input.convex_hull.polygon.points)
+  geometry_msgs::Pose pose_transformed;
+  tf2::doTransform(input_object.pose, pose_transformed, transform_stamped);
+  
+  geometry_msgs::Polygon polygon_transformed;
+  for (auto const& point : input_object.convex_hull.polygon.points)
   {
     geometry_msgs::Point coord_before_transform, coord_after_transform;
     coord_before_transform.x = point.x;
@@ -281,13 +281,13 @@ autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(con
     transformed_point.x = coord_after_transform.x;
     transformed_point.y = coord_after_transform.y;
     transformed_point.z = coord_after_transform.z;
-    transformed_polygon.points.emplace_back(transformed_point);
+    polygon_transformed.points.emplace_back(transformed_point);
   }
 
-  autoware_msgs::DetectedObject transformed_object = object_input;
-  transformed_object.header = object_input.header;
+  autoware_msgs::DetectedObject transformed_object = input_object;
   transformed_object.header.frame_id = "map";
-  transformed_object.convex_hull.polygon = transformed_polygon;
+  transformed_object.pose = pose_transformed;
+  transformed_object.convex_hull.polygon = polygon_transformed;
 
   return std::move(transformed_object);
 }

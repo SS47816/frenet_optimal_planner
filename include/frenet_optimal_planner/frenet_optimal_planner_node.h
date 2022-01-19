@@ -92,7 +92,8 @@ private:
   fop::Path ref_spline_;                // Reference Spline
   fop::Path output_path_;               // Output Path
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
-  
+  autoware_msgs::DetectedObjectArray::Ptr obstacles_;
+
   // Controllers
   control::PID pid_;
 
@@ -115,9 +116,6 @@ private:
   tf2_ros::TransformListener tf_listener;
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config>::CallbackType f;
-
-  autoware_msgs::DetectedObjectArray obstacles_;
-  SATCollisionChecker sat_collision_checker_instance;
 
   // ###################################### Private Functions ######################################
 
