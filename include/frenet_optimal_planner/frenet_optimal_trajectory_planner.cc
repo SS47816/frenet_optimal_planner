@@ -268,48 +268,33 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
  */
 bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& frenet_path,
                                                         const autoware_msgs::DetectedObjectArray& obstacles,
-                                                        const std::string& margin)
+                                                        const double margin)
 {
   // ROS_INFO("Collision checking start");
 
-  geometry_msgs::Polygon vehicle_rect;
-  // geometry_msgs::Polygon vehicle_hard_margin;
-  geometry_msgs::Polygon vehicle_soft_margin;
-
-  // double begin = ros::WallTime::now().toSec();
-
-  for (int i = 0; i < frenet_path.x.size(); i++)
+  geometry_msgs::Polygon vehicle_rect, obstacle_rect;
+  for (auto const& object : obstacles.objects)
   {
-    double cost = 0;
-
-    double vehicle_center_x = frenet_path.x[i] + fop::Vehicle::Lr() * cos(frenet_path.yaw[i]);
-    double vehicle_center_y = frenet_path.y[i] + fop::Vehicle::Lr() * sin(frenet_path.yaw[i]);
-
-    vehicle_rect = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_path.yaw[i], 
-                                                                      settings_.vehicle_length, settings_.vehicle_width, TRUE_SIZE_MARGIN);
-
-    // vehicle_hard_margin = sat_collision_checker_instance.construct_rectangle(frenet_path.x[i], frenet_path.y[i],
-    //                                                                 frenet_path.yaw[i], settings_.vehicle_length,
-    //                                                                 vehicle_width, HARD_MARGIN);
-
-    vehicle_soft_margin = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_path.yaw[i], 
-                                                                             settings_.vehicle_length, settings_.vehicle_width, settings_.soft_safety_margin);
-
-    for (auto const& object : obstacles.objects)
+    // Predict Object's Trajectory
+    const int num_steps = frenet_path.x.size();
+    fop::Path object_traj = predictTrajectory(object, settings_.tick_t, num_steps);
+    
+    // Check for collisions between ego and obstacle trajectories
+    for (int i = 0; i < num_steps; i++)
     {
-      if (margin == "no")
+      double cost = 0;
+
+      double vehicle_center_x = frenet_path.x[i] + fop::Vehicle::Lr() * cos(frenet_path.yaw[i]);
+      double vehicle_center_y = frenet_path.y[i] + fop::Vehicle::Lr() * sin(frenet_path.yaw[i]);
+
+      vehicle_rect = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_path.yaw[i], 
+                                                                        settings_.vehicle_length, settings_.vehicle_width, margin);
+      obstacle_rect = sat_collision_checker_instance.construct_rectangle(object_traj.x[i], object_traj.y[i], object_traj.yaw[i], 
+                                                                         object.dimensions.x, object.dimensions.y, 0.0);
+
+      if (sat_collision_checker_instance.check_collision(vehicle_rect, obstacle_rect))
       {
-        if (sat_collision_checker_instance.check_collision(vehicle_rect, object.convex_hull.polygon))
-        {
-          return false;
-        }
-      }
-      else if (margin == "soft")
-      {
-        if (sat_collision_checker_instance.check_collision(vehicle_soft_margin, object.convex_hull.polygon))
-        {
-          return false;
-        }
+        return false;
       }
     }
   }
@@ -318,6 +303,32 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
   // ROS_INFO("Collision checking done in: %f secs", end - begin);
   // std::cout << "END COLLISION CHECK" << count << std::endl;
   return true;
+}
+
+fop::Path FrenetOptimalTrajectoryPlanner::predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps)
+{
+  fop::Path obstacle_trajectory;
+
+  obstacle_trajectory.x.push_back(obstacle.pose.position.x);
+  obstacle_trajectory.y.push_back(obstacle.pose.position.y);
+  tf2::Quaternion q_tf2(obstacle.pose.orientation.x, obstacle.pose.orientation.y,
+                        obstacle.pose.orientation.z, obstacle.pose.orientation.w);
+  tf2::Matrix3x3 m(q_tf2.normalize());
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  obstacle_trajectory.yaw.push_back(yaw);
+  const double v = fop::magnitude(obstacle.velocity.linear.x, obstacle.velocity.linear.y, obstacle.velocity.linear.z);
+  obstacle_trajectory.v.push_back(v);
+  
+  for (size_t i = 1; i < steps; i++)
+  {
+    obstacle_trajectory.x.push_back(obstacle_trajectory.x.back() + v*tick_t*std::cos(yaw));
+    obstacle_trajectory.x.push_back(obstacle_trajectory.y.back() + v*tick_t*std::sin(yaw));
+    obstacle_trajectory.yaw.push_back(yaw);
+    obstacle_trajectory.v.push_back(v);
+  }
+
+  return obstacle_trajectory;
 }
 
 /**
@@ -426,7 +437,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
   std::vector<bool> collision_checks;
   for (const auto& frenet_path : passed_constraints_paths)
   {
-    collision_checks.push_back(checkPathCollision(frenet_path, obstacles, "no"));
+    collision_checks.push_back(checkPathCollision(frenet_path, obstacles, 0.0));
   }
   std::cout << "Collision Checking Done!" << std::endl;
 

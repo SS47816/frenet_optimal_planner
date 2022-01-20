@@ -22,8 +22,10 @@
 #include "vehicle_state.h"
 #include "vehicle.h"
 
-#include "sat_collision_checker.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <autoware_msgs/DetectedObjectArray.h>
+
+#include "sat_collision_checker.h"
 
 #define TRUE_SIZE_LENGTH 3
 #define TRUE_SIZE_MARGIN 0.3
@@ -122,8 +124,9 @@ private:
   std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline);
 
   // Check for collisions and calculate obstacle cost
-  bool checkPathCollision(const fop::FrenetPath& frenet_path, const autoware_msgs::DetectedObjectArray& obstacles, const std::string& margin);
-
+  bool checkPathCollision(const fop::FrenetPath& frenet_path, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
+  fop::Path predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps);
+  
   // Check for vehicle kinematic constraints
   std::vector<fop::FrenetPath> checkPaths(const std::vector<fop::FrenetPath>& frenet_paths_list,
                                           const autoware_msgs::DetectedObjectArray& obstacles, int path_size);

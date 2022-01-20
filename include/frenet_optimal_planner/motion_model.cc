@@ -11,8 +11,7 @@ namespace fop
 {
 
 // Get the next state std::vector of the bicycle vehicle kinematic model
-VehicleState getNextKinematicModelState(const VehicleState &state, const ActuatorState &actuators, 
-                                        double Lf, double dt)
+VehicleState getNextKinematicModelState(const VehicleState &state, const ActuatorState &actuators, double Lf, double dt)
 {
   // state [x, y, psi, v]
   const double x = state.x;
