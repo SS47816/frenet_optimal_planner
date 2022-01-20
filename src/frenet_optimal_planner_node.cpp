@@ -201,6 +201,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
     obstacles_->objects.emplace_back(transformObjectFrame(object, transform_stamped));
   }
 
+  obstacles_->header.stamp = ros::Time::now();
   obstacles_pub.publish(*obstacles_);
 
   // Check if all required data are in position
