@@ -130,10 +130,10 @@ private:
   // Functions fo publishing results
   void publishEmptyPathsAndStop();
   void publishRefSpline(const fop::Path& path);
-  void publishOutputPath(const fop::Path& path);
-  void publishNextPath(const fop::FrenetPath& frenet_path);
+  void publishCurrTraj(const fop::Path& path);
+  void publishNextTraj(const fop::FrenetPath& next_traj);
   void publishVehicleCmd(const double accel, const double angle);
-  void publishCandidatePaths();
+  void publishCandidateTrajs();
 
   // Odom Helper Function
   void updateVehicleFrontAxleState();
@@ -147,7 +147,7 @@ private:
 
   fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list, const int current_lane);
 
-  void concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation, const double wp_min_seperation);
+  void concatPath(const fop::FrenetPath& next_traj, const int path_size, const double wp_max_seperation, const double wp_min_seperation);
 
   // Stanley Steeing Functions
   bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);

@@ -201,9 +201,9 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 
   // Publish the best paths
   publishRefSpline(ref_spline_);
-  publishCandidatePaths();
-  publishOutputPath(curr_trajectory_);
-  publishNextPath(best_path);
+  publishCandidateTrajs();
+  publishCurrTraj(curr_trajectory_);
+  publishNextTraj(best_path);
 }
 
 // Update vehicle current state from the tf transform
@@ -320,7 +320,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
 }
 
 // Publish the current path (for Rviz and MPC)
-void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
+void FrenetOptimalPlannerNode::publishCurrTraj(const fop::Path& path)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
@@ -341,20 +341,20 @@ void FrenetOptimalPlannerNode::publishOutputPath(const fop::Path& path)
 }
 
 // Publish the best next path (for Rviz only)
-void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_path)
+void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
   curr_trajectory_msg.header.frame_id = "map";
 
-  for (size_t i = 0; i < frenet_path.c.size(); i++)
+  for (size_t i = 0; i < next_traj.c.size(); i++)
   {
     geometry_msgs::PoseStamped pose;
     pose.header = curr_trajectory_msg.header;
-    pose.pose.position.x = frenet_path.x[i];
-    pose.pose.position.y = frenet_path.y[i];
-    pose.pose.position.z = map_height_ + 2.0*std::hypot(frenet_path.s_d[i], frenet_path.d_d[i])/fop::Vehicle::max_speed();
-    pose.pose.orientation = tf::createQuaternionMsgFromYaw(frenet_path.yaw[i]);
+    pose.pose.position.x = next_traj.x[i];
+    pose.pose.position.y = next_traj.y[i];
+    pose.pose.position.z = map_height_ + 2.0*std::hypot(next_traj.s_d[i], next_traj.d_d[i])/fop::Vehicle::max_speed();
+    pose.pose.orientation = tf::createQuaternionMsgFromYaw(next_traj.yaw[i]);
     curr_trajectory_msg.poses.emplace_back(pose);
   }
 
@@ -365,7 +365,7 @@ void FrenetOptimalPlannerNode::publishNextPath(const fop::FrenetPath& frenet_pat
  * @brief publish candidate paths for visualization in rviz
  * 
  */
-void FrenetOptimalPlannerNode::publishCandidatePaths()
+void FrenetOptimalPlannerNode::publishCandidateTrajs()
 {
   visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidatePaths(
     frenet_planner_.safest_paths, frenet_planner_.close_proximity_paths,
@@ -381,8 +381,8 @@ void FrenetOptimalPlannerNode::publishEmptyPathsAndStop()
 {
   // Publish empty paths
   publishRefSpline(fop::Path());
-  publishOutputPath(fop::Path());
-  publishNextPath(fop::FrenetPath());
+  publishCurrTraj(fop::Path());
+  publishNextTraj(fop::FrenetPath());
   publishVehicleCmd(-1.0, 0.0);
 }
 
@@ -668,12 +668,14 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
 }
 
 // Concatenate the best next path to the current path
-void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, const int path_size, const double wp_max_seperation, const double wp_min_seperation)
+void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, const int path_size, const double wp_max_seperation, const double wp_min_seperation)
 {
+  
+  
   // Concatenate the best path to the output path
-  int diff = std::min(path_size - curr_trajectory_.x.size(), frenet_path.x.size());
+  int diff = std::min(path_size - curr_trajectory_.x.size(), next_traj.x.size());
   // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Current Size: " << path_size << " Diff: " << diff
-  //           << " Next Path Size: " << frenet_path.x.size() << std::endl;
+  //           << " Next Path Size: " << next_traj.x.size() << std::endl;
 
   for (size_t i = 0; i < diff; i++)
   {
@@ -682,11 +684,11 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
     // Check if the separation between adjacent waypoint are permitted
     if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
     {
-      wp_seperation = fop::distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), frenet_path.x[i], frenet_path.y[i]);
+      wp_seperation = fop::distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
     }
     else
     {
-      wp_seperation = fop::distance(frenet_path.x[i], frenet_path.y[i], frenet_path.x[i+1], frenet_path.y[i+1]);
+      wp_seperation = fop::distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
     }
 
     // If the separation is too big/small, reject point onward
@@ -697,10 +699,10 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& frenet_path, co
       break;
     }
 
-    curr_trajectory_.x.push_back(frenet_path.x[i]);
-    curr_trajectory_.y.push_back(frenet_path.y[i]);
-    curr_trajectory_.yaw.push_back(frenet_path.yaw[i]);
-    curr_trajectory_.v.push_back(std::hypot(frenet_path.s_d[i], frenet_path.d_d[i]));
+    curr_trajectory_.x.push_back(next_traj.x[i]);
+    curr_trajectory_.y.push_back(next_traj.y[i]);
+    curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
+    curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
 
     // std::cout << "Concatenate round " << i << ": Output Path Size: " << curr_trajectory_.x.size() << std::endl;
   }
