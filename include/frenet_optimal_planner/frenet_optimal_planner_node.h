@@ -77,7 +77,6 @@ private:
   // Control outputs
   double acceleration_;
   double steering_angle_;
-  // ActuatorState actuator_state_;
 
   // Vehicle's current state
   fop::VehicleState current_state_;    // State of the vehicle baselink

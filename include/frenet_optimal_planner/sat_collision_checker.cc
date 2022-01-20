@@ -126,7 +126,7 @@ bool SATCollisionChecker::is_overlapping(std::vector<double> projection1, std::v
 /**
  * @brief Check for collision between the object and the obstacle
  * 
- * @param rect Rectangle representing the buggy
+ * @param rect Rectangle representing the vehicle
  * @param obstacle_poly Convex hull of the obstacle
  * @return true 
  * @return false 
@@ -164,49 +164,49 @@ bool SATCollisionChecker::check_collision(geometry_msgs::Polygon rect, geometry_
  * @param centre_x x-coordinate of the rectangle center in the map frame
  * @param centre_y y-coodinate of the rectangle center in the map frame
  * @param yaw Angle (in radians) to rotate the rectangle about
- * @param length Length of the buggy
- * @param width Width of the buggy
+ * @param length Length of the vehicle
+ * @param width Width of the vehicle
  * @param margin Lateral safety margin 
- * @return Rectangle representing the position of the buggy in the map frame. Total width of rectangle =  width + (2 * margin) 
+ * @return Rectangle representing the position of the vehicle in the map frame. Total width of rectangle =  width + (2 * margin) 
  */
 geometry_msgs::Polygon SATCollisionChecker::construct_rectangle(double centre_x, double centre_y, double yaw, double length, double width, double margin)
 {
-    geometry_msgs::Point32 p1;
-    geometry_msgs::Point32 p2;
-    geometry_msgs::Point32 p3;
-    geometry_msgs::Point32 p4;
+  geometry_msgs::Point32 p1;
+  geometry_msgs::Point32 p2;
+  geometry_msgs::Point32 p3;
+  geometry_msgs::Point32 p4;
 
-    // x axis is longitudinal, y axis is lateral
+  // x axis is longitudinal, y axis is lateral
 
-    // construct at center of map initially
-    double bottom_x = -length / 2;
-    double top_x = length / 2;
-    double left_y = -width / 2 - margin;
-    double right_y = width / 2 + margin;
+  // construct at center of map initially
+  double bottom_x = -length / 2;
+  double top_x = length / 2;
+  double left_y = -width / 2 - margin;
+  double right_y = width / 2 + margin;
 
-    p1.x = bottom_x;
-    p1.y = left_y;
+  p1.x = bottom_x;
+  p1.y = left_y;
 
-    p2.x = top_x;
-    p2.y = left_y;
+  p2.x = top_x;
+  p2.y = left_y;
 
-    p3.x = top_x;
-    p3.y = right_y;
+  p3.x = top_x;
+  p3.y = right_y;
 
-    p4.x = bottom_x;
-    p4.y = right_y;
+  p4.x = bottom_x;
+  p4.y = right_y;
 
-    geometry_msgs::Polygon rectangle;
+  geometry_msgs::Polygon rectangle;
 
-    rectangle.points.push_back(p1);
-    rectangle.points.push_back(p2);
-    rectangle.points.push_back(p3);
-    rectangle.points.push_back(p4);
+  rectangle.points.push_back(p1);
+  rectangle.points.push_back(p2);
+  rectangle.points.push_back(p3);
+  rectangle.points.push_back(p4);
 
-    // rotate rectangle by yaw angle and translate to actual position on map
-    rectangle = rotate_and_translate_rect(rectangle, centre_x, centre_y, yaw);
-    rectangle.points.push_back(rectangle.points.at(0));
-    return rectangle;
+  // rotate rectangle by yaw angle and translate to actual position on map
+  rectangle = rotate_and_translate_rect(rectangle, centre_x, centre_y, yaw);
+  rectangle.points.push_back(rectangle.points.at(0));
+  return rectangle;
 }
 
 /**
@@ -215,50 +215,50 @@ geometry_msgs::Polygon SATCollisionChecker::construct_rectangle(double centre_x,
  * @param centre_x x-coordinate of the rectangle center in the map frame
  * @param centre_y y-coodinate of the rectangle center in the map frame
  * @param yaw Angle (in radians) to rotate the rectangle about
- * @param length Length of the straight bumper, dynamic with respect to speed of the buggy
- * @param width Width of the buggy
+ * @param length Length of the straight bumper, dynamic with respect to speed of the vehicle
+ * @param width Width of the vehicle
  * @param margin Lateral safety margin 
  * @return Rectangle representing the position of the dynamic straight bumper in the map frame.
  */geometry_msgs::Polygon SATCollisionChecker::construct_straight_bumper(double centre_x, double centre_y, double yaw,
                                                                     double length, double width, double margin)
 {
-    geometry_msgs::Point32 p1;
-    geometry_msgs::Point32 p2;
-    geometry_msgs::Point32 p3;
-    geometry_msgs::Point32 p4;
+  geometry_msgs::Point32 p1;
+  geometry_msgs::Point32 p2;
+  geometry_msgs::Point32 p3;
+  geometry_msgs::Point32 p4;
 
-    // x axis is longitudinal, y axis is lateral
+  // x axis is longitudinal, y axis is lateral
 
-    // construct at center of map initially
-    //1.5 is half of true length
-    double bottom_x = -1.5;
-    double top_x = 1.5 + length;
-    double left_y = -width / 2 - margin;
-    double right_y = width / 2 + margin;
+  // construct at center of map initially
+  //1.5 is half of true length
+  double bottom_x = -1.5;
+  double top_x = 1.5 + length;
+  double left_y = -width / 2 - margin;
+  double right_y = width / 2 + margin;
 
-    p1.x = bottom_x;
-    p1.y = left_y;
+  p1.x = bottom_x;
+  p1.y = left_y;
 
-    p2.x = top_x;
-    p2.y = left_y;
+  p2.x = top_x;
+  p2.y = left_y;
 
-    p3.x = top_x;
-    p3.y = right_y;
+  p3.x = top_x;
+  p3.y = right_y;
 
-    p4.x = bottom_x;
-    p4.y = right_y;
+  p4.x = bottom_x;
+  p4.y = right_y;
 
-    geometry_msgs::Polygon rectangle;
+  geometry_msgs::Polygon rectangle;
 
-    rectangle.points.push_back(p1);
-    rectangle.points.push_back(p2);
-    rectangle.points.push_back(p3);
-    rectangle.points.push_back(p4);
+  rectangle.points.push_back(p1);
+  rectangle.points.push_back(p2);
+  rectangle.points.push_back(p3);
+  rectangle.points.push_back(p4);
 
-    // rotate rectangle by yaw angle and translate to actual position on map
-    rectangle = rotate_and_translate_rect(rectangle, centre_x, centre_y, yaw);
-    rectangle.points.push_back(rectangle.points.at(0));
-    return rectangle;
+  // rotate rectangle by yaw angle and translate to actual position on map
+  rectangle = rotate_and_translate_rect(rectangle, centre_x, centre_y, yaw);
+  rectangle.points.push_back(rectangle.points.at(0));
+  return rectangle;
 }
 
 /**

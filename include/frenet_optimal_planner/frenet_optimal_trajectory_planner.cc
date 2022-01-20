@@ -272,9 +272,9 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
 {
   // ROS_INFO("Collision checking start");
 
-  geometry_msgs::Polygon buggy_rect;
-  // geometry_msgs::Polygon buggy_hard_margin;
-  geometry_msgs::Polygon buggy_soft_margin;
+  geometry_msgs::Polygon vehicle_rect;
+  // geometry_msgs::Polygon vehicle_hard_margin;
+  geometry_msgs::Polygon vehicle_soft_margin;
 
   // double begin = ros::WallTime::now().toSec();
 
@@ -282,33 +282,31 @@ bool FrenetOptimalTrajectoryPlanner::checkPathCollision(const fop::FrenetPath& f
   {
     double cost = 0;
 
-    double buggy_center_x = frenet_path.x[i] + fop::Vehicle::Lr() * cos(frenet_path.yaw[i]);
-    double buggy_center_y = frenet_path.y[i] + fop::Vehicle::Lr() * sin(frenet_path.yaw[i]);
+    double vehicle_center_x = frenet_path.x[i] + fop::Vehicle::Lr() * cos(frenet_path.yaw[i]);
+    double vehicle_center_y = frenet_path.y[i] + fop::Vehicle::Lr() * sin(frenet_path.yaw[i]);
 
-    buggy_rect = sat_collision_checker_instance.construct_rectangle(buggy_center_x, buggy_center_y,
-                                                                    frenet_path.yaw[i], settings_.vehicle_length,
-                                                                    settings_.vehicle_width, TRUE_SIZE_MARGIN);
+    vehicle_rect = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_path.yaw[i], 
+                                                                      settings_.vehicle_length, settings_.vehicle_width, TRUE_SIZE_MARGIN);
 
-    // buggy_hard_margin = sat_collision_checker_instance.construct_rectangle(frenet_path.x[i], frenet_path.y[i],
+    // vehicle_hard_margin = sat_collision_checker_instance.construct_rectangle(frenet_path.x[i], frenet_path.y[i],
     //                                                                 frenet_path.yaw[i], settings_.vehicle_length,
     //                                                                 vehicle_width, HARD_MARGIN);
 
-    buggy_soft_margin = sat_collision_checker_instance.construct_rectangle(
-        buggy_center_x, buggy_center_y, frenet_path.yaw[i], settings_.vehicle_length, settings_.vehicle_width,
-        settings_.soft_safety_margin);
+    vehicle_soft_margin = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_path.yaw[i], 
+                                                                             settings_.vehicle_length, settings_.vehicle_width, settings_.soft_safety_margin);
 
     for (auto const& object : obstacles.objects)
     {
       if (margin == "no")
       {
-        if (sat_collision_checker_instance.check_collision(buggy_rect, object.convex_hull.polygon))
+        if (sat_collision_checker_instance.check_collision(vehicle_rect, object.convex_hull.polygon))
         {
           return false;
         }
       }
       else if (margin == "soft")
       {
-        if (sat_collision_checker_instance.check_collision(buggy_soft_margin, object.convex_hull.polygon))
+        if (sat_collision_checker_instance.check_collision(vehicle_soft_margin, object.convex_hull.polygon))
         {
           return false;
         }
@@ -366,13 +364,13 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       else if (frenet_path.s_d[j] > settings_.max_speed)
       {
         safe = false;
-        std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+        // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
         break;
       }
       else if (frenet_path.s_dd[j] > settings_.max_accel || frenet_path.s_dd[j] < settings_.max_decel)
       {
         safe = false;
-        std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+        // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
         break;
       }
     }

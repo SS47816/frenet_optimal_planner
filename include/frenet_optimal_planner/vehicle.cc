@@ -12,6 +12,8 @@ namespace fop
   };
   std::vector<Eigen::Vector3d> Vehicle::footprint()
   {
+    
+    
     return std::vector<Eigen::Vector3d>{};
   }
   double Vehicle::L() { return 2.75; };
