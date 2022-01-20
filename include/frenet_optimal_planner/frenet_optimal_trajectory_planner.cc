@@ -360,7 +360,7 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
       if (!fop::isLegal(frenet_path.x[j]) || !fop::isLegal(frenet_path.y[j]))
       {
         safe = false;
-        std::cout << "Condition 0: Contains ilegal values" << std::endl;
+        // std::cout << "Condition 0: Contains ilegal values" << std::endl;
         break;
       }
       else if (frenet_path.s_d[j] > settings_.max_speed)
@@ -394,7 +394,6 @@ FrenetOptimalTrajectoryPlanner::checkPaths(const std::vector<fop::FrenetPath>& f
         }
       }
 
-      // if (frenet_path.curvature_check)
       if (curvature_passed)
       {
         passed_constraints_paths.emplace_back(frenet_path);

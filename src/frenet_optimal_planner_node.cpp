@@ -132,7 +132,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 
   // Initializing states
   regenerate_flag_ = false;
-  target_lane_ = LaneID::CURR_LANE;
+  target_lane_id_ = LaneID::CURR_LANE;
   pid_ = control::PID(0.1, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
@@ -220,25 +220,25 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   ROS_INFO("Local Planner: Reference Curve Generated");
 
   // Define ROI width for path sampling
-  roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
+  roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result 
-  std::vector<fop::FrenetPath> best_path_list = 
+  std::vector<fop::FrenetPath> best_traj_list = 
     frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, SETTINGS.centre_offset, 
     roi_boundaries_[0], roi_boundaries_[1], *obstacles, SETTINGS.target_speed, current_state_.v, TRAJ_MAX_SIZE);
 
   // Find the best path from the all candidates 
-  fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
+  fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best Paths Selected");
 
   // Concatenate the best path into output_path
-  concatPath(best_path, TRAJ_MAX_SIZE, WP_MAX_SEP, WP_MIN_SEP);
+  concatPath(best_traj, TRAJ_MAX_SIZE, TRAJ_MIN_SIZE, WP_MAX_SEP, WP_MIN_SEP);
 
   // Publish the best paths
   publishRefSpline(ref_spline_);
   publishCandidateTrajs();
   publishCurrTraj(curr_trajectory_);
-  publishNextTraj(best_path);
+  publishNextTraj(best_traj);
 
   const auto end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
@@ -534,19 +534,19 @@ void FrenetOptimalPlannerNode::updateStartState()
   // Update current lane
   if (std::abs(start_state_.d) <= LANE_WIDTH/2)
   {
-    current_lane_ = LaneID::CURR_LANE;
+    current_lane_id_ = LaneID::CURR_LANE;
   }
   else if (start_state_.d > LANE_WIDTH/2)
   {
-    current_lane_ = LaneID::LEFT_LANE;
+    current_lane_id_ = LaneID::LEFT_LANE;
   }
   else if (start_state_.d < -LANE_WIDTH/2)
   {
-    current_lane_ = LaneID::RIGHT_LANE;
+    current_lane_id_ = LaneID::RIGHT_LANE;
   }
   else
   {
-    current_lane_ = -1;
+    current_lane_id_ = -1;
     ROS_WARN("Vehicle's lateral position is %f, too far off", start_state_.d);
   }
 }
@@ -591,33 +591,33 @@ std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(con
 }
 
 // Select the ideal lane to proceed
-fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::FrenetPath>& best_path_list, const int current_lane)
+fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::FrenetPath>& best_traj_list, const int current_lane)
 {
-  fop::FrenetPath best_path;
+  fop::FrenetPath best_traj;
   bool change_lane_flag;
   int keep_lane_id = -1;
   int change_lane_id = -1;
   double keep_lane_cost = std::numeric_limits<double>::max();
   double change_lane_cost = std::numeric_limits<double>::max();
 
-  for (size_t i = 0; i < best_path_list.size(); i++)
+  for (size_t i = 0; i < best_traj_list.size(); i++)
   {
-    if (!best_path_list[i].x.empty())
+    if (!best_traj_list[i].x.empty())
     {
       // keep lane option
-      if (best_path_list[i].lane_id == current_lane || best_path_list[i].lane_id == 0)
+      if (best_traj_list[i].lane_id == current_lane || best_traj_list[i].lane_id == 0)
       {
-        if (best_path_list[i].cf < keep_lane_cost)
+        if (best_traj_list[i].cf < keep_lane_cost)
         {
           keep_lane_id = i;
-          keep_lane_cost = best_path_list[i].cf;
+          keep_lane_cost = best_traj_list[i].cf;
         }
       }
       // change lane option
       else
       {
         change_lane_id = i;
-        change_lane_cost = best_path_list[i].cf;
+        change_lane_cost = best_traj_list[i].cf;
       }
     }
   }
@@ -629,13 +629,13 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
     {
       ROS_INFO("Local Planner: Keeping Lane");
       change_lane_flag = false;
-      best_path = best_path_list[keep_lane_id];
+      best_traj = best_traj_list[keep_lane_id];
     }
     else
     {
       ROS_INFO("Local Planner: Changing Lane");
       change_lane_flag = true;
-      best_path = best_path_list[change_lane_id];
+      best_traj = best_traj_list[change_lane_id];
     }
   }
   // if only keep lane available
@@ -643,14 +643,14 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
   {
     ROS_INFO("Local Planner: Keeping Lane");
     change_lane_flag = false;
-    best_path = best_path_list[keep_lane_id];
+    best_traj = best_traj_list[keep_lane_id];
   }
   // if only change lane available
   else if (keep_lane_id == -1 && change_lane_id != -1)
   {
     ROS_INFO("Local Planner: Changing Lane");
     change_lane_flag = true;
-    best_path = best_path_list[change_lane_id];
+    best_traj = best_traj_list[change_lane_id];
   }
   // if none available
   else
@@ -658,22 +658,24 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
     ROS_INFO("Local Planner: No Path Available");
     change_lane_flag = false;
     // dummy path
-    best_path = fop::FrenetPath();
+    best_traj = fop::FrenetPath();
   }
 
-  return best_path;
+  return best_traj;
 }
 
 // Concatenate the best next path to the current path
-void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, const int path_size, const double wp_max_seperation, const double wp_min_seperation)
+void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
 {
-  
-  
-  // Concatenate the best path to the output path
-  int diff = std::min(path_size - curr_trajectory_.x.size(), next_traj.x.size());
-  // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Current Size: " << path_size << " Diff: " << diff
-  //           << " Next Path Size: " << next_traj.x.size() << std::endl;
+  size_t diff = 0;
+  if (curr_trajectory_.x.size() <= traj_min_size)
+  {
+    diff = std::min(traj_max_size - curr_trajectory_.x.size(), next_traj.x.size());
+    // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Current Size: " << traj_max_size << " Diff: " << diff
+    //           << " Next Path Size: " << next_traj.x.size() << std::endl;
+  }
 
+  // Concatenate the best path to the output path
   for (size_t i = 0; i < diff; i++)
   {
     double wp_seperation;
@@ -704,6 +706,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
     // std::cout << "Concatenate round " << i << ": Output Path Size: " << curr_trajectory_.x.size() << std::endl;
   }
 
+  // Calculate control outputs and Erase the point that have been executed
   if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
   {
     // Calculate steering angle
@@ -718,8 +721,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
     else
     {
       ROS_ERROR("Local Planner: No output steering angle");
-      // Publish empty control output
-      publishVehicleCmd(-1.0, 0.0);
+      publishVehicleCmd(-1.0, 0.0); // Publish empty control output
     }
 
     const int next_wp_id = fop::nextWaypoint(current_state_, curr_trajectory_);

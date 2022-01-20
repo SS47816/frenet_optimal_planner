@@ -70,8 +70,8 @@ private:
   bool regenerate_flag_;
 
   // Lane related variables
-  int current_lane_;
-  int target_lane_;
+  int current_lane_id_;
+  int target_lane_id_;
   double map_height_;
 
   // Control outputs
@@ -110,7 +110,6 @@ private:
 
   // ROS
   ros::NodeHandle nh;
-  // ros::Timer timer;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
@@ -131,24 +130,19 @@ private:
   void publishVehicleCmd(const double accel, const double angle);
   void publishCandidateTrajs();
 
-  // Odom Helper Function
-  void updateVehicleFrontAxleState();
-
   // Planner Helper Functions
   bool feedWaypoints();
   void updateStartState();
+  void transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects);
 
   std::vector<double> getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width, const double current_lane_width,
                                                      const double left_lane_width, const double right_lane_width);
-
   fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list, const int current_lane);
-
-  void concatPath(const fop::FrenetPath& next_traj, const int path_size, const double wp_max_seperation, const double wp_min_seperation);
+  void concatPath(const fop::FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation);
 
   // Stanley Steeing Functions
+  void updateVehicleFrontAxleState();
   bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);
-
-  void transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects);
 };
 
 } // namespace fop
