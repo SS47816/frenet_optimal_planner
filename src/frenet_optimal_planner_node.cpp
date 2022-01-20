@@ -146,6 +146,8 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 // Local planner main logic
 void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_event)
 {
+  const auto start_time = std::chrono::high_resolution_clock::now();
+
   // Check if all required data are in position
   if (obstacles_->objects.size() == 0)
   {
@@ -204,6 +206,11 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
   publishCandidateTrajs();
   publishCurrTraj(curr_trajectory_);
   publishNextTraj(best_path);
+
+  const auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
+  // const auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+  ROS_INFO("Local Planner: Planning took %f ms", elapsed_time.count());
 }
 
 // Update vehicle current state from the tf transform

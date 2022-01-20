@@ -18,7 +18,6 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTraj
 
 std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fop::Lane& lane)
 {
-  // FrenetOptimalTrajectoryPlanner::ResultType result = FrenetOptimalTrajectoryPlanner::ResultType();
   Path ref_path = Path();
   auto cubic_spline = fop::Spline2D(lane);
 
@@ -219,15 +218,11 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
 {
   for (int i = 0; i < frenet_paths_list.size(); i++)
   {
-    // std::cout << "Break 1" << std::endl;
     // calculate global positions
     for (int j = 0; j < frenet_paths_list[i].s.size(); j++)
     {
-      // std::cout << "Break 1.1" << std::endl;
       fop::VehicleState state = cubic_spline.calculatePosition(frenet_paths_list[i].s[j]);
-      // std::cout << "Break 1.2" << std::endl;
       double i_yaw = cubic_spline.calculateYaw(frenet_paths_list[i].s[j]);
-      // std::cout << "Break 1.3" << std::endl;
       const double di = frenet_paths_list[i].d[j];
       const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
       const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
