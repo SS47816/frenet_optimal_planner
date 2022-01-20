@@ -16,7 +16,7 @@ FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanne
 
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
-const double WP_MIN_SEP = 0.01;                                   // Minimum allowable waypoint separation
+const double WP_MIN_SEP = 0.1;                                    // Minimum allowable waypoint separation
 const double HEADING_DIFF_THRESH = M_PI/2;                        // Maximum allowed heading diff between vehicle and path
 const double MAX_DIST_FROM_PATH = 10.0;                           // Maximum allowed distance between vehicle and path
 
@@ -92,9 +92,6 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
 // Constructor
 FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
 {
-  // Hyperparameter
-  double planning_frequency;
-
   // topics
   std::string odom_topic;
   std::string lane_info_topic;
@@ -110,7 +107,6 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   server.setCallback(f);
 
   // Hyperparameters from launch file
-  ROS_ASSERT(private_nh.getParam("planning_frequency", planning_frequency));
   ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic));
   ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic));
   ROS_ASSERT(private_nh.getParam("obstacles_topic", obstacles_topic));
@@ -137,7 +133,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   // Initializing states
   regenerate_flag_ = false;
   target_lane_ = LaneID::CURR_LANE;
-  pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
+  pid_ = control::PID(0.1, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
 void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
