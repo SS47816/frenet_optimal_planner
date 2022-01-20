@@ -92,7 +92,6 @@ private:
   fop::Path ref_spline_;                // Reference Spline
   fop::Path curr_trajectory_;           // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
-  autoware_msgs::DetectedObjectArray::Ptr obstacles_;
 
   // Controllers
   control::PID pid_;
@@ -149,7 +148,7 @@ private:
   // Stanley Steeing Functions
   bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);
 
-  autoware_msgs::DetectedObject transformObjectFrame(const autoware_msgs::DetectedObject& object_input, const geometry_msgs::TransformStamped& transform_stamped);
+  void transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects);
 };
 
 } // namespace fop

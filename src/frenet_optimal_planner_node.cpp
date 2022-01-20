@@ -138,7 +138,6 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   regenerate_flag_ = false;
   target_lane_ = LaneID::CURR_LANE;
   pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
-  obstacles_ = boost::make_shared<autoware_msgs::DetectedObjectArray>();
 };
 
 void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
@@ -179,33 +178,15 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
 
 void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
 {
+  // Start a timing for the main algorithm
   const auto start_time = std::chrono::high_resolution_clock::now();
   
-  obstacles_->header = input_obstacles->header;
-  obstacles_->header.frame_id = "map";
-  obstacles_->objects.clear();
-
-  geometry_msgs::TransformStamped transform_stamped;
-  try
-  {
-    transform_stamped = tf_buffer.lookupTransform("map", input_obstacles->header.frame_id, ros::Time(0));
-  }
-  catch (tf2::TransformException& ex)
-  {
-    ROS_WARN("%s", ex.what());
-    return;
-  }
-
-  for (auto const& object : input_obstacles->objects)
-  {
-    obstacles_->objects.emplace_back(transformObjectFrame(object, transform_stamped));
-  }
-
-  obstacles_->header.stamp = ros::Time::now();
-  obstacles_pub.publish(*obstacles_);
+  auto obstacles = boost::make_shared<autoware_msgs::DetectedObjectArray>();
+  transformObjects(*obstacles, *input_obstacles);
+  obstacles_pub.publish(*obstacles);
 
   // Check if all required data are in position
-  if (obstacles_->objects.size() == 0)
+  if (obstacles->objects.empty())
   {
     ROS_WARN("Local Planner: No obstacles received");
     // publishEmptyPathsAndStop();
@@ -248,7 +229,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   // Get the planning result 
   std::vector<fop::FrenetPath> best_path_list = 
     frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, SETTINGS.centre_offset, 
-    roi_boundaries_[0], roi_boundaries_[1], *obstacles_, SETTINGS.target_speed, current_state_.v, TRAJ_MAX_SIZE);
+    roi_boundaries_[0], roi_boundaries_[1], *obstacles, SETTINGS.target_speed, current_state_.v, TRAJ_MAX_SIZE);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_path = selectLane(best_path_list, current_lane_);
@@ -268,36 +249,54 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   ROS_INFO("Local Planner: Planning took %f ms", elapsed_time.count());
 }
 
-autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& input_object,
-                                                                             const geometry_msgs::TransformStamped& transform_stamped)
+void FrenetOptimalPlannerNode::transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects)
 {
-  geometry_msgs::Pose pose_transformed;
-  tf2::doTransform(input_object.pose, pose_transformed, transform_stamped);
-  
-  geometry_msgs::Polygon polygon_transformed;
-  for (auto const& point : input_object.convex_hull.polygon.points)
+  output_objects.header = input_objects.header;
+  output_objects.header.stamp = ros::Time::now();
+  output_objects.header.frame_id = "map";
+  output_objects.objects.clear();
+
+  geometry_msgs::TransformStamped transform_stamped;
+  try
   {
-    geometry_msgs::Point coord_before_transform, coord_after_transform;
-    coord_before_transform.x = point.x;
-    coord_before_transform.y = point.y;
-    coord_before_transform.z = point.z;
-
-    tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
-
-    geometry_msgs::Point32 transformed_point;
-    transformed_point.x = coord_after_transform.x;
-    transformed_point.y = coord_after_transform.y;
-    transformed_point.z = coord_after_transform.z;
-    polygon_transformed.points.emplace_back(transformed_point);
+    transform_stamped = tf_buffer.lookupTransform("map", input_objects.header.frame_id, ros::Time(0));
+  }
+  catch (tf2::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    return;
   }
 
-  autoware_msgs::DetectedObject transformed_object = input_object;
-  transformed_object.header.frame_id = "map";
-  transformed_object.pose = pose_transformed;
-  transformed_object.convex_hull.polygon = polygon_transformed;
-  transformed_object.convex_hull.header.frame_id = "map";
+  for (auto const& object : input_objects.objects)
+  {
+    geometry_msgs::Pose pose_transformed;
+    tf2::doTransform(object.pose, pose_transformed, transform_stamped);
+    
+    geometry_msgs::Polygon polygon_transformed;
+    for (auto const& point : object.convex_hull.polygon.points)
+    {
+      geometry_msgs::Point coord_before_transform, coord_after_transform;
+      coord_before_transform.x = point.x;
+      coord_before_transform.y = point.y;
+      coord_before_transform.z = point.z;
 
-  return std::move(transformed_object);
+      tf2::doTransform(coord_before_transform, coord_after_transform, transform_stamped);
+
+      geometry_msgs::Point32 transformed_point;
+      transformed_point.x = coord_after_transform.x;
+      transformed_point.y = coord_after_transform.y;
+      transformed_point.z = coord_after_transform.z;
+      polygon_transformed.points.emplace_back(transformed_point);
+    }
+
+    autoware_msgs::DetectedObject transformed_object = object;
+    transformed_object.header.frame_id = "map";
+    transformed_object.pose = pose_transformed;
+    transformed_object.convex_hull.polygon = polygon_transformed;
+    transformed_object.convex_hull.header.frame_id = "map";
+    
+    output_objects.objects.emplace_back(std::move(transformed_object));
+  }
 }
 
 // Publish the reference spline (for Rviz only)
