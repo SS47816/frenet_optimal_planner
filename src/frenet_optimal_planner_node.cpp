@@ -137,21 +137,76 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   // Initializing states
   regenerate_flag_ = false;
   target_lane_ = LaneID::CURR_LANE;
-  timer = nh.createTimer(ros::Duration(1.0/planning_frequency), &FrenetOptimalPlannerNode::mainTimerCallback, this);
   pid_ = control::PID(1.0/planning_frequency, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
-
   obstacles_ = boost::make_shared<autoware_msgs::DetectedObjectArray>();
 };
 
-// Local planner main logic
-void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_event)
+void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
+{
+  lane_ = fop::Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
+  ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
+}
+
+// Update vehicle current state from the tf transform
+void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
+{
+  current_state_.v = magnitude(odom_msg->twist.twist.linear.x, odom_msg->twist.twist.linear.y, odom_msg->twist.twist.linear.z);
+
+  geometry_msgs::TransformStamped transform_stamped;
+  try
+  {
+    transform_stamped = tf_buffer.lookupTransform("map", odom_msg->header.frame_id, ros::Time(0));
+  }
+  catch (tf2::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    return;
+  }
+
+  geometry_msgs::Pose pose_in_map;
+  tf2::doTransform(odom_msg->pose.pose, pose_in_map, transform_stamped);
+  // Current XY of robot (map frame)
+  current_state_.x = pose_in_map.position.x;
+  current_state_.y = pose_in_map.position.y;
+  map_height_ = pose_in_map.position.z - 0.3; // minus the tire radius
+
+  tf2::Quaternion q_tf2(pose_in_map.orientation.x, pose_in_map.orientation.y,
+                        pose_in_map.orientation.z, pose_in_map.orientation.w);
+  tf2::Matrix3x3 m(q_tf2.normalize());
+  double roll, pitch;
+  m.getRPY(roll, pitch, current_state_.yaw);
+}
+
+void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
+  
+  obstacles_->header = input_obstacles->header;
+  obstacles_->header.frame_id = "map";
+  obstacles_->objects.clear();
+
+  geometry_msgs::TransformStamped transform_stamped;
+  try
+  {
+    transform_stamped = tf_buffer.lookupTransform("map", input_obstacles->header.frame_id, ros::Time(0));
+  }
+  catch (tf2::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    return;
+  }
+
+  for (auto const& object : input_obstacles->objects)
+  {
+    obstacles_->objects.emplace_back(transformObjectFrame(object, transform_stamped));
+  }
+
+  obstacles_pub.publish(*obstacles_);
 
   // Check if all required data are in position
   if (obstacles_->objects.size() == 0)
   {
-    ROS_WARN("Local Planner: No obstacles_ received");
+    ROS_WARN("Local Planner: No obstacles received");
     // publishEmptyPathsAndStop();
     // return;
   }
@@ -209,63 +264,7 @@ void FrenetOptimalPlannerNode::mainTimerCallback(const ros::TimerEvent& timer_ev
 
   const auto end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
-  // const auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
   ROS_INFO("Local Planner: Planning took %f ms", elapsed_time.count());
-}
-
-// Update vehicle current state from the tf transform
-void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
-{
-  current_state_.v = magnitude(odom_msg->twist.twist.linear.x, odom_msg->twist.twist.linear.y, odom_msg->twist.twist.linear.z);
-
-  geometry_msgs::TransformStamped transform_stamped;
-  try
-  {
-    transform_stamped = tf_buffer.lookupTransform("map", odom_msg->header.frame_id, ros::Time(0));
-  }
-  catch (tf2::TransformException& ex)
-  {
-    ROS_WARN("%s", ex.what());
-    return;
-  }
-
-  geometry_msgs::Pose pose_in_map;
-  tf2::doTransform(odom_msg->pose.pose, pose_in_map, transform_stamped);
-  // Current XY of robot (map frame)
-  current_state_.x = pose_in_map.position.x;
-  current_state_.y = pose_in_map.position.y;
-  map_height_ = pose_in_map.position.z - 0.3; // minus the tire radius
-
-  tf2::Quaternion q_tf2(pose_in_map.orientation.x, pose_in_map.orientation.y,
-                        pose_in_map.orientation.z, pose_in_map.orientation.w);
-  tf2::Matrix3x3 m(q_tf2.normalize());
-  double roll, pitch;
-  m.getRPY(roll, pitch, current_state_.yaw);
-}
-
-void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
-{
-  obstacles_->header = input_obstacles->header;
-  obstacles_->header.frame_id = "map";
-  obstacles_->objects.clear();
-
-  geometry_msgs::TransformStamped transform_stamped;
-  try
-  {
-    transform_stamped = tf_buffer.lookupTransform("map", input_obstacles->header.frame_id, ros::Time(0));
-  }
-  catch (tf2::TransformException& ex)
-  {
-    ROS_WARN("%s", ex.what());
-    return;
-  }
-
-  for (auto const& object : input_obstacles->objects)
-  {
-    obstacles_->objects.emplace_back(transformObjectFrame(object, transform_stamped));
-  }
-
-  obstacles_pub.publish(obstacles_);
 }
 
 autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(const autoware_msgs::DetectedObject& input_object,
@@ -295,14 +294,9 @@ autoware_msgs::DetectedObject FrenetOptimalPlannerNode::transformObjectFrame(con
   transformed_object.header.frame_id = "map";
   transformed_object.pose = pose_transformed;
   transformed_object.convex_hull.polygon = polygon_transformed;
+  transformed_object.convex_hull.header.frame_id = "map";
 
   return std::move(transformed_object);
-}
-
-void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
-{
-  lane_ = fop::Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
-  ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
 
 // Publish the reference spline (for Rviz only)

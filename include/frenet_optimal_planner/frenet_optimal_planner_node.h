@@ -111,7 +111,7 @@ private:
 
   // ROS
   ros::NodeHandle nh;
-  ros::Timer timer;
+  // ros::Timer timer;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
   dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
@@ -119,13 +119,10 @@ private:
 
   // ###################################### Private Functions ######################################
 
-  // Main Function in ROS running primary logics
-  void mainTimerCallback(const ros::TimerEvent& timer_event);
-
   // Functions for subscribing
+  void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles);
-  void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
 
   // Functions fo publishing results
   void publishEmptyPathsAndStop();
