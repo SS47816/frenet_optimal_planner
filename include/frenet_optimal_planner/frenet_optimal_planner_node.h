@@ -90,7 +90,7 @@ private:
   fop::Lane lane_;                      // Maps (All the waypoints)
   fop::Lane local_lane_;                // Selected Waypoints
   fop::Path ref_spline_;                // Reference Spline
-  fop::Path output_path_;               // Output Path
+  fop::Path curr_trajectory_;           // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
   autoware_msgs::DetectedObjectArray::Ptr obstacles_;
 
@@ -102,8 +102,8 @@ private:
   ros::Subscriber lane_info_sub;
   ros::Subscriber obstacles_sub;
 
-  ros::Publisher output_path_pub;
-  ros::Publisher next_path_pub;
+  ros::Publisher curr_traj_pub;
+  ros::Publisher next_traj_pub;
   ros::Publisher ref_path_pub;
   ros::Publisher vehicle_cmd_pub;
   ros::Publisher candidate_paths_pub;

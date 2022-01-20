@@ -38,8 +38,8 @@
     <param name="ref_speed_topic"		            value="behaviour_planner/min_speed"/>
     <param name="current_steering_angle_topic" 	value="present_steering_angle"/> -->
     <!-- Output Topic Names -->
-    <param name="output_path_topic"             value="local_planner/output_path"/>
-    <param name="next_path_topic"               value="local_planner/next_path"/>
+    <param name="curr_traj_topic"               value="local_planner/current_trajectory"/>
+    <param name="next_traj_topic"               value="local_planner/next_trajectory"/>
     <param name="ref_path_topic"                value="local_planner/ref_path"/>
     <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
     <!-- <param name="turn_signal_topic"             value="turn_signal"/>
