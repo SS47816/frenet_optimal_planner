@@ -13,19 +13,6 @@
     <remap from="~output/global_path"         to="/planning/mission_planning/global_path" />
   </node>
 
-  <!-- Vector Map OP Planner -->
-  <node pkg="op_global_planner" type="op_global_planner" name="op_global_planner" output="screen">
-    <param name="pathDensity"                 value="0.75" />   <!-- distance between each two waypoints-->
-    <param name="enableSmoothing"             value="true" />   <!-- 1 or 0 -->
-    <param name="enableLaneChange"            value="false" />  <!-- 1 or 0 -->
-    <param name="enableRvizInput"             value="false" />  <!-- 1 or 0 -->
-    <param name="enableReplan"                value="true" />   <!-- 1 or 0 -->    
-    <param name="velocitySource"              value="1" />      <!-- read velocities from (0- Odometry, 1- autoware current_velocities, 2- car_info) "" -->
-    <param name="mapSource"                   value="0" />      <!-- Autoware=0, Vector Map Folder=1, kml file=2 -->
-    <param name="mapFileName"                 value="" />       <!-- incase of kml map source -->
-    <param name="enableDynamicMapUpdate"      value="false" />
-  </node> 
-
   <!-- Local Planner -->
   <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
     <!-- Hyperparameters -->
