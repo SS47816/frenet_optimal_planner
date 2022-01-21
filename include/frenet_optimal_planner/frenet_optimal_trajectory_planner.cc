@@ -42,35 +42,50 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
                                                       const double left_width, const double right_width, const double current_speed, 
                                                       const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async)
 {
+  const auto start_time = std::chrono::high_resolution_clock::now();
+  
   // Sample a list of FrenetPaths
   std::vector<fop::FrenetPath> frenet_traj_list = generateFrenetPaths(frenet_state, lane_id, settings_.centre_offset, left_width, right_width, settings_.target_speed, current_speed);
-  const int num_paths_generated = frenet_traj_list.size();
-  std::cout << "Total Paths Generated: " << num_paths_generated << std::endl;
+  const int num_trajs_generated = frenet_traj_list.size();
+  const std::chrono::duration<double, std::milli> generation_time = std::chrono::high_resolution_clock::now() - start_time;
 
   // Convert to global paths
-  frenet_traj_list = calculateGlobalPaths(frenet_traj_list, cubic_spline);
-  std::cout << "Paths Converted to Global Frame: " << frenet_traj_list.size() << std::endl;
+  const int num_conversion_checks = calculateGlobalPaths(frenet_traj_list, cubic_spline);
+  const std::chrono::duration<double, std::milli> convertion_time = std::chrono::high_resolution_clock::now() - start_time - generation_time;
 
   // Check the constraints
-  checkConstraints(frenet_traj_list);
-  
+  const int num_constraint_checks = checkConstraints(frenet_traj_list);
+  const std::chrono::duration<double, std::milli> constraint_time = std::chrono::high_resolution_clock::now() - start_time - convertion_time;
 
   // Compute costs
-  computeCosts(frenet_traj_list, current_speed);
+  const int num_cost_checks = computeCosts(frenet_traj_list, current_speed);
+  const std::chrono::duration<double, std::milli> cost_time = std::chrono::high_resolution_clock::now() - start_time - constraint_time;
 
   // Check collisions
+  int num_collision_checks = 0;
   if (check_collision)
   {
-    checkCollisions(frenet_traj_list, obstacles, use_async);
+    num_collision_checks = checkCollisions(frenet_traj_list, obstacles, use_async);
   }
   else
   {
     std::cout << "Collision Checking Skipped" << std::endl;
   }
-  
+  const std::chrono::duration<double, std::milli> collision_time = std::chrono::high_resolution_clock::now() - start_time - cost_time;
+
   // Find the path with minimum costs
   std::vector<fop::FrenetPath> best_path_list = findBestPaths(frenet_traj_list);
 
+  // Print Summary
+  std::chrono::duration<double, std::milli> total_time = std::chrono::high_resolution_clock::now() - start_time;
+  std::cout << "Summary: " << std::endl;
+  std::cout << "Step 1 : Generated               " << num_trajs_generated   << " Trajectories in " << generation_time.count() << " ms" << std::endl;
+  std::cout << "Step 2 : Converted               " << num_conversion_checks << " Trajectories in " << convertion_time.count() << " ms" << std::endl;
+  std::cout << "Step 3 : Checked Constraints for " << num_constraint_checks << " Trajectories in " << constraint_time.count() << " ms" << std::endl;
+  std::cout << "Step 4 : Computed Cost for       " << num_cost_checks       << " Trajectories in " << cost_time.count() << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << num_collision_checks  << " Polygon Pairs in " << collision_time.count() << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << total_time.count() << " ms" << std::endl;
+  
   return best_path_list;
 }
 
@@ -171,8 +186,9 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
   return frenet_trajs;
 }
 
-std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline)
+int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline)
 {
+  int num_checks = 0;
   for (int i = 0; i < frenet_traj_list.size(); i++)
   {
     // calculate global positions
@@ -211,9 +227,11 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
       double yaw_diff = fop::unifyAngleRange(frenet_traj_list[i].yaw[j+1] - frenet_traj_list[i].yaw[j]);
       frenet_traj_list[i].c.emplace_back(yaw_diff / frenet_traj_list[i].ds[j]);
     }
+
+    num_checks++;
   }
 
-  return frenet_traj_list;
+  return num_checks;
 }
 
 /**
@@ -225,9 +243,10 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::calculateGlobalPath
  * @return vector containing the safe paths. If there are no safe paths, a dummy vector is returned.
  */
 
-void FrenetOptimalTrajectoryPlanner::checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list)
+int FrenetOptimalTrajectoryPlanner::checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list)
 {
-  size_t num_passed = 0;
+  int num_passed = 0;
+  int num_checks = 0;
   for (auto& frenet_traj : frenet_traj_list)
   {
     bool passed = true;
@@ -254,21 +273,24 @@ void FrenetOptimalTrajectoryPlanner::checkConstraints(std::vector<fop::FrenetPat
       else if (std::abs(frenet_traj.c[j]) > settings_.max_curvature)
       {
         passed = false;
-        std::cout << "Exceeded max curvature = " << settings_.max_curvature
-                  << ". Curr curvature = " << (frenet_traj.c[j]) << std::endl;
+        // std::cout << "Exceeded max curvature = " << settings_.max_curvature
+        //           << ". Curr curvature = " << (frenet_traj.c[j]) << std::endl;
         break;
       }
     }
 
     frenet_traj.constraint_passed = passed;
-    num_passed++;
+    num_passed += passed? 1 : 0;
+    num_checks++;
   }
 
   std::cout << "Constraints checked for " << frenet_traj_list.size() << " trajectories, with " << num_passed << " passed" << std::endl;
+  return num_checks;
 }
 
-void FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed)
+int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed)
 {
+  int num_checks = 0;
   for (auto& traj : frenet_trajs)
   {
     if (!traj.constraint_passed)
@@ -293,27 +315,34 @@ void FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& 
     traj.cd = settings_.k_jerk * jerk_d + planning_time_cost + settings_.k_diff * pow(traj.d.back() - settings_.centre_offset, 2);
     traj.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff;
     traj.cf = settings_.k_lateral * traj.cd + settings_.k_longitudinal * traj.cs;
+    
+    num_checks++;
   }
+
+  return num_checks;
 }
 
 
-void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async)
+int FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  size_t num_passed = 0;
+  int num_passed = 0;
+  int num_checks = 0;
   if (use_async)
   {
-    std::vector<std::future<bool>> collision_checks;
+    std::vector<std::future<std::pair<bool, int>>> collision_checks;
     for (auto& frenet_traj : frenet_traj_list)
     {
       collision_checks.emplace_back(
         std::async(std::launch::async, &FrenetOptimalTrajectoryPlanner::checkTrajCollision, this, 
         frenet_traj, obstacles, 0.0));
     }
-    for (size_t i = 0; i < collision_checks.size(); i++)
+    for (int i = 0; i < collision_checks.size(); i++)
     {
-      frenet_traj_list[i].collision_passed = collision_checks[i].get();
+      const auto result = collision_checks[i].get();
+      frenet_traj_list[i].collision_passed = result.first;
       num_passed += frenet_traj_list[i].collision_passed ? 1 : 0;
+      num_checks += result.second;
     }
 
     const auto end_time = std::chrono::high_resolution_clock::now();
@@ -325,9 +354,10 @@ void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath
   {
     for (auto& frenet_traj : frenet_traj_list)
     {
-      // collision_checks.push_back(checkTrajCollision(frenet_traj, obstacles, 0.0));
-      frenet_traj.collision_passed = checkTrajCollision(frenet_traj, obstacles, 0.0);
+      const auto result = checkTrajCollision(frenet_traj, obstacles, 0.0);
+      frenet_traj.collision_passed = result.first;
       num_passed += frenet_traj.collision_passed ? 1 : 0;
+      num_checks += result.second;
     }
 
     const auto end_time = std::chrono::high_resolution_clock::now();
@@ -335,6 +365,8 @@ void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath
     std::cout << "Sync Collision Checked " << frenet_traj_list.size() << " trajectories in " 
               << elapsed_time.count() << " ms, with " << num_passed << " passed" << std::endl;
   }
+
+  return num_checks;
 }
 
 /**
@@ -345,10 +377,11 @@ void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath
  * @param margin collision margin in [m]
  * @return false if there is a collision along the path. Otherwise, true
  */
-bool FrenetOptimalTrajectoryPlanner::checkTrajCollision(const fop::FrenetPath& frenet_traj,
+std::pair<bool, int> FrenetOptimalTrajectoryPlanner::checkTrajCollision(const fop::FrenetPath& frenet_traj,
                                                         const autoware_msgs::DetectedObjectArray& obstacles,
                                                         const double margin)
 {
+  int num_checks = 0;
   geometry_msgs::Polygon vehicle_rect, obstacle_rect;
   for (auto const& object : obstacles.objects)
   {
@@ -359,8 +392,7 @@ bool FrenetOptimalTrajectoryPlanner::checkTrajCollision(const fop::FrenetPath& f
     // Check for collisions between ego and obstacle trajectories
     for (int i = 0; i < num_steps; i++)
     {
-      double cost = 0;
-
+      num_checks++;
       double vehicle_center_x = frenet_traj.x[i] + fop::Vehicle::Lr() * cos(frenet_traj.yaw[i]);
       double vehicle_center_y = frenet_traj.y[i] + fop::Vehicle::Lr() * sin(frenet_traj.yaw[i]);
 
@@ -371,12 +403,12 @@ bool FrenetOptimalTrajectoryPlanner::checkTrajCollision(const fop::FrenetPath& f
 
       if (sat_collision_checker_instance.check_collision(vehicle_rect, obstacle_rect))
       {
-        return false;
+        return std::pair<bool, int>{false, num_checks};
       }
     }
   }
 
-  return true;
+  return std::pair<bool, int>{true, num_checks};
 }
 
 fop::Path FrenetOptimalTrajectoryPlanner::predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps)

@@ -121,17 +121,17 @@ private:
                                                    const double desired_speed, const double current_speed);
 
   // Convert paths from frenet frame to gobal map frame
-  std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline);
+  int calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline);
 
   // Compute costs for candidate trajectories
-  void computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed);
+  int computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed);
 
   // Check for vehicle kinematic constraints
-  void checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list);
+  int checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list);
 
   // Check for collisions and calculate obstacle cost
-  void checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
-  bool checkTrajCollision(const fop::FrenetPath& frenet_traj, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
+  int checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
+  std::pair<bool, int> checkTrajCollision(const fop::FrenetPath& frenet_traj, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
   fop::Path predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps);
 
   // Select the best paths for each lane option
