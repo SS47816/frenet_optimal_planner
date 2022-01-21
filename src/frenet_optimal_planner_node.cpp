@@ -38,6 +38,8 @@ double LEFT_LANE_WIDTH;       // Maximum left road width [m]
 double RIGHT_LANE_WIDTH;      // Maximum right road width [m]
 // double NARROW_PATH_OFFSET = -0.3;
 
+bool CHECK_COLLISION;
+
 bool SETTINGS_UPDATED = false;
 
 // Dynamic parameter server callback function
@@ -46,6 +48,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // Hyperparameters for output path
   TRAJ_MAX_SIZE = config.traj_max_size;
   TRAJ_MIN_SIZE = config.traj_min_size;
+
+  CHECK_COLLISION = config.check_collision;
 
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
@@ -223,9 +227,9 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result 
-  std::vector<fop::FrenetPath> best_traj_list = 
-    frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, SETTINGS.centre_offset, 
-    roi_boundaries_[0], roi_boundaries_[1], *obstacles, SETTINGS.target_speed, current_state_.v, TRAJ_MAX_SIZE);
+  std::vector<fop::FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+                                                                                      roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
+                                                                                      *obstacles, CHECK_COLLISION, false);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
@@ -570,14 +574,14 @@ std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(con
     case LaneID::CURR_LANE:
       left_bound = current_lane_width/2;
       right_bound = -current_lane_width/2;
-      ROS_INFO("Local Planner: Sampling On The Left Lane");
+      ROS_INFO("Local Planner: Sampling On The Current Lane");
       break;
 
     // change to left lane
     case LaneID::LEFT_LANE:
       left_bound = current_lane_width/2 + left_lane_width;
       right_bound = current_lane_width/2;
-      ROS_INFO("Local Planner: Sampling On The Right Lane");
+      ROS_INFO("Local Planner: Sampling On The Left Lane");
       break;
     // change to right lane
     case LaneID::RIGHT_LANE:

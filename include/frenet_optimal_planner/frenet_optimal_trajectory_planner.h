@@ -22,13 +22,14 @@
 #include "vehicle_state.h"
 #include "vehicle.h"
 
+// #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <autoware_msgs/DetectedObjectArray.h>
 
 #include "sat_collision_checker.h"
 
-#define TRUE_SIZE_LENGTH 3
-#define TRUE_SIZE_MARGIN 0.3
+// #define TRUE_SIZE_LENGTH 3
+// #define TRUE_SIZE_MARGIN 0.3
 
 namespace fop
 {
@@ -95,10 +96,9 @@ public:
   std::pair<Path, Spline2D> generateReferenceCurve(const fop::Lane& lane);
 
   // Plan for the optimal trajectory
-  std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline, const fop::FrenetState& frenet_state,
-                                                     double center_offset, double left_width, double right_width,
-                                                     const autoware_msgs::DetectedObjectArray& obstacles,
-                                                     double desired_speed, double current_speed, int path_size);
+  std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline, const fop::FrenetState& frenet_state, const int lane_id,
+                                                     const double left_width, const double right_width, const double current_speed, 
+                                                     const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
 
   /* ------------------------ variables (visualization) ----------------------- */
   std::vector<fop::FrenetPath> safest_paths;
@@ -116,9 +116,9 @@ private:
   
   /* Private Functions */
   // Sample candidate trajectories
-  std::vector<fop::FrenetPath> generateFrenetPaths(const fop::FrenetState& frenet_state, double center_offset, 
-                                                   double left_bound, double right_bound, 
-                                                   double desired_speed, double current_speed);
+  std::vector<fop::FrenetPath> generateFrenetPaths(const fop::FrenetState& frenet_state, const int lane_id,
+                                                   const double center_offset, const double left_bound, const double right_bound, 
+                                                   const double desired_speed, const double current_speed);
 
   // Convert paths from frenet frame to gobal map frame
   std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline);
