@@ -53,7 +53,7 @@ namespace fop
 
 class FrenetOptimalPlannerNode
 {
-public:
+ public:
   // Constructor
   FrenetOptimalPlannerNode();
   // Destructor
@@ -62,7 +62,7 @@ public:
   // Planning algorithm instance
   FrenetOptimalTrajectoryPlanner frenet_planner_;
 
-private:
+ private:
   // Regnerate path flag
   bool regenerate_flag_;
 

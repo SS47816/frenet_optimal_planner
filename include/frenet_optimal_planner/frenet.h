@@ -48,6 +48,12 @@ class FrenetPath
   virtual ~FrenetPath() {};
 
   int lane_id;
+  // checks
+  bool constraint_passed;
+  bool collision_passed;
+  // costs
+  double cd, cs, cf;
+  
   // time list
   std::vector<double> t;
   // longitudinal
@@ -66,14 +72,6 @@ class FrenetPath
   std::vector<double> yaw;
   std::vector<double> ds;
   std::vector<double> c;
-  // costs
-  double cd = 0.0;
-  double cs = 0.0;
-  double cf = 0.0;
-  // path speed
-  // double speed;
-  // curvature check
-  bool curvature_check;
 };
 
 // Convert the position in Cartesian coordinates to Frenet frame

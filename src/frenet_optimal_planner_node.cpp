@@ -242,7 +242,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
 
   const auto end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
-  ROS_INFO("Local Planner: Planning took %f ms", elapsed_time.count());
+  ROS_INFO("Local Planner: Planning took %f ms, (or %f Hz)", elapsed_time.count(), 1000/elapsed_time.count());
 }
 
 void FrenetOptimalPlannerNode::transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects)
@@ -364,13 +364,13 @@ void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
  */
 void FrenetOptimalPlannerNode::publishCandidateTrajs()
 {
-  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidatePaths(
-    frenet_planner_.safest_paths, frenet_planner_.close_proximity_paths,
-    frenet_planner_.unsafe_paths, frenet_planner_.backup_unchecked_paths,
-    frenet_planner_.backup_safest_paths, frenet_planner_.backup_close_proximity_paths,
-    frenet_planner_.backup_unsafe_paths);
+  // visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidatePaths(
+  //   frenet_planner_.safest_paths, frenet_planner_.close_proximity_paths,
+  //   frenet_planner_.unsafe_paths, frenet_planner_.backup_unchecked_paths,
+  //   frenet_planner_.backup_safest_paths, frenet_planner_.backup_close_proximity_paths,
+  //   frenet_planner_.backup_unsafe_paths);
 
-  candidate_paths_pub.publish(candidate_paths_markers);
+  // candidate_paths_pub.publish(candidate_paths_markers);
 }
 
 // Publish empty paths (for Rviz only)

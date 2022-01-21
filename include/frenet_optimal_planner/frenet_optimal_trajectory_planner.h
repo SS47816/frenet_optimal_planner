@@ -102,13 +102,13 @@ public:
 
   /* ------------------------ variables (visualization) ----------------------- */
   std::vector<fop::FrenetPath> safest_paths;
-  std::vector<fop::FrenetPath> close_proximity_paths;
   std::vector<fop::FrenetPath> unsafe_paths;
 
-  std::vector<fop::FrenetPath> backup_unchecked_paths;
-  std::vector<fop::FrenetPath> backup_safest_paths;
-  std::vector<fop::FrenetPath> backup_close_proximity_paths;
-  std::vector<fop::FrenetPath> backup_unsafe_paths;
+  // std::vector<fop::FrenetPath> close_proximity_paths;
+  // std::vector<fop::FrenetPath> backup_unchecked_paths;
+  // std::vector<fop::FrenetPath> backup_safest_paths;
+  // std::vector<fop::FrenetPath> backup_close_proximity_paths;
+  // std::vector<fop::FrenetPath> backup_unsafe_paths;
 
 private:
   Setting settings_;
@@ -121,21 +121,24 @@ private:
                                                    double desired_speed, double current_speed);
 
   // Convert paths from frenet frame to gobal map frame
-  std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_paths_list, fop::Spline2D& cubic_spline);
+  std::vector<fop::FrenetPath> calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline);
+
+  // Compute costs for candidate trajectories
+  void computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed);
+
+  // Check for vehicle kinematic constraints
+  void checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list);
 
   // Check for collisions and calculate obstacle cost
-  bool checkPathCollision(const fop::FrenetPath& frenet_path, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
+  void checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
+  bool checkTrajCollision(const fop::FrenetPath& frenet_traj, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
   fop::Path predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps);
-  
-  // Check for vehicle kinematic constraints
-  std::vector<fop::FrenetPath> checkPaths(const std::vector<fop::FrenetPath>& frenet_paths_list,
-                                          const autoware_msgs::DetectedObjectArray& obstacles, int path_size);
 
   // Select the best paths for each lane option
-  std::vector<fop::FrenetPath> findBestPaths(const std::vector<fop::FrenetPath>& frenet_paths_list);
+  std::vector<fop::FrenetPath> findBestPaths(const std::vector<fop::FrenetPath>& frenet_traj_list);
 
   // Select the path with the minimum cost
-  fop::FrenetPath findBestPath(const std::vector<fop::FrenetPath>& frenet_paths_list, int target_lane_id);
+  fop::FrenetPath findBestPath(const std::vector<fop::FrenetPath>& frenet_traj_list, int target_lane_id);
 };
 
 }  // namespace fop
