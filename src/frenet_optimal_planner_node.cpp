@@ -39,6 +39,7 @@ double RIGHT_LANE_WIDTH;      // Maximum right road width [m]
 // double NARROW_PATH_OFFSET = -0.3;
 
 bool CHECK_COLLISION;
+bool USE_ASYNC;
 
 bool SETTINGS_UPDATED = false;
 
@@ -50,6 +51,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   TRAJ_MIN_SIZE = config.traj_min_size;
 
   CHECK_COLLISION = config.check_collision;
+  USE_ASYNC = config.use_async;
 
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
@@ -229,7 +231,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   // Get the planning result 
   std::vector<fop::FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
-                                                                                      *obstacles, CHECK_COLLISION, false);
+                                                                                      *obstacles, CHECK_COLLISION, USE_ASYNC);
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);

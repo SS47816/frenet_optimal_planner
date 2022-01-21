@@ -61,7 +61,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   // Check collisions
   if (check_collision)
   {
-    checkCollisions(frenet_traj_list, obstacles, false);
+    checkCollisions(frenet_traj_list, obstacles, use_async);
   }
   else
   {
@@ -315,6 +315,11 @@ void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath
       frenet_traj_list[i].collision_passed = collision_checks[i].get();
       num_passed += frenet_traj_list[i].collision_passed ? 1 : 0;
     }
+
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
+    std::cout << "Async Collision Checked " << frenet_traj_list.size() << " trajectories in " 
+              << elapsed_time.count() << " ms, with " << num_passed << " passed" << std::endl;
   }
   else
   {
@@ -324,12 +329,12 @@ void FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<fop::FrenetPath
       frenet_traj.collision_passed = checkTrajCollision(frenet_traj, obstacles, 0.0);
       num_passed += frenet_traj.collision_passed ? 1 : 0;
     }
-  }
 
-  const auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
-  std::cout << "Async Collision Checked " << frenet_traj_list.size() << " trajectories in " 
-            << elapsed_time.count() << " ms, with " << num_passed << " passed" << std::endl;
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
+    std::cout << "Sync Collision Checked " << frenet_traj_list.size() << " trajectories in " 
+              << elapsed_time.count() << " ms, with " << num_passed << " passed" << std::endl;
+  }
 }
 
 /**
