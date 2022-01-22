@@ -40,13 +40,14 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
   std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<size_t>());
   
   // Calculate the elapsed_time for the current iteration, in [ms]
-  for (int i = 1; i < timestamps.size(); i++)
+  for (int i = 0; i < timestamps.size() - 1; i++)
   {
-    const std::chrono::duration<double, std::milli> elapsed_time = timestamps[i] - timestamps[i-1];
-    this->time.emplace_back(elapsed_time.count());
+    const std::chrono::duration<double, std::milli> elapsed_time = timestamps[i+1] - timestamps[i];
+    std::cout << elapsed_time.count() << std::endl;
+    this->time[i] = elapsed_time.count();
   }
   const std::chrono::duration<double, std::milli> elapsed_time = timestamps.back() - timestamps.front();
-  this->time.emplace_back(elapsed_time.count());
+  this->time.back() = elapsed_time.count();
 
   // Add the current elapsed_time to total time, in [ms]
   std::transform(this->total_time.begin(), this->total_time.end(), this->time.begin(), this->total_time.begin(), std::plus<double>());
