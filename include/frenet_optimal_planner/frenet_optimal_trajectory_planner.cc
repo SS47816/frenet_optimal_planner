@@ -10,7 +10,84 @@
 
 namespace fop
 {
-FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTrajectoryPlanner::Setting settings)
+
+FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0)
+{
+  this->numbers = std::vector<size_t>(5, size_t(0));
+  this->total_numbers = std::vector<size_t>(5, size_t(0));
+  this->time = std::vector<double>(6, double(0));
+  this->total_time = std::vector<double>(6, double(0));
+  this->numbers.shrink_to_fit();
+  this->total_numbers.shrink_to_fit();
+  this->time.shrink_to_fit();
+  this->total_time.shrink_to_fit();
+}
+
+void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps)
+{
+  if (numbers.size() != 5 || timestamps.size() != 6)
+  {
+    std::cout << "Recorded TestResult for this planning iteration is invalid" << std::endl;
+    return;
+  }
+  
+  this->count++;
+
+  // Update the numbers for the current iteration
+  this->numbers = numbers;
+
+  // Add the current numbers to total numbers
+  std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<size_t>());
+  
+  // Calculate the elapsed_time for the current iteration, in [ms]
+  for (int i = 1; i < timestamps.size(); i++)
+  {
+    const std::chrono::duration<double, std::milli> elapsed_time = timestamps[i] - timestamps[i-1];
+    this->time.emplace_back(elapsed_time.count());
+  }
+  const std::chrono::duration<double, std::milli> elapsed_time = timestamps.back() - timestamps.front();
+  this->time.emplace_back(elapsed_time.count());
+
+  // Add the current elapsed_time to total time, in [ms]
+  std::transform(this->total_time.begin(), this->total_time.end(), this->time.begin(), this->total_time.begin(), std::plus<double>());
+}
+
+void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
+{
+  // Print Summary for this iteration
+  std::cout << " " << std::endl;
+  std::cout << "Summary: This Planning Iteration (iteration no." << this->count << ")" << std::endl;
+  std::cout << "Step 1 : Generated               " << this->numbers[0] << " Trajectories in " << this->time[0] << " ms" << std::endl;
+  std::cout << "Step 2 : Converted               " << this->numbers[1] << " Trajectories in " << this->time[1] << " ms" << std::endl;
+  std::cout << "Step 3 : Checked Constraints for " << this->numbers[2] << " Trajectories in " << this->time[2] << " ms" << std::endl;
+  std::cout << "Step 4 : Computed Cost for       " << this->numbers[3] << " Trajectories in " << this->time[3] << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->numbers[4] << " PolygonPairs in " << this->time[4] << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->time[5] << " ms" << std::endl;
+
+  // Print Summary for average performance
+  std::cout << " " << std::endl;
+  std::cout << "Summary: Average Performance (" << this->count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Generated               " << this->total_numbers[0]/this->count << " Trajectories in " << this->total_time[0]/this->count << " ms" << std::endl;
+  std::cout << "Step 2 : Converted               " << this->total_numbers[1]/this->count << " Trajectories in " << this->total_time[1]/this->count << " ms" << std::endl;
+  std::cout << "Step 3 : Checked Constraints for " << this->total_numbers[2]/this->count << " Trajectories in " << this->total_time[2]/this->count << " ms" << std::endl;
+  std::cout << "Step 4 : Computed Cost for       " << this->total_numbers[3]/this->count << " Trajectories in " << this->total_time[3]/this->count << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/this->count << " PolygonPairs in " << this->total_time[4]/this->count << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms" << std::endl;
+}
+
+FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
+{
+  this->settings_ = Setting();
+  this->test_result_ = TestResult();
+}
+
+FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTrajectoryPlanner::Setting& settings)
+{
+  this->settings_ = settings;
+  this->test_result_ = TestResult();
+}
+
+void FrenetOptimalTrajectoryPlanner::updateSettings(Setting& settings)
 {
   this->settings_ = settings;
 }
@@ -42,24 +119,30 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
                                                       const double left_width, const double right_width, const double current_speed, 
                                                       const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async)
 {
-  const auto start_time = std::chrono::high_resolution_clock::now();
+  // Initialize a series of results to be recorded
+  std::vector<size_t> numbers;
+  std::vector<std::chrono::_V2::system_clock::time_point> timestamps;
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   
   // Sample a list of FrenetPaths
   std::vector<fop::FrenetPath> frenet_traj_list = generateFrenetPaths(frenet_state, lane_id, settings_.centre_offset, left_width, right_width, settings_.target_speed, current_speed);
-  const int num_trajs_generated = frenet_traj_list.size();
-  const std::chrono::duration<double, std::milli> generation_time = std::chrono::high_resolution_clock::now() - start_time;
+  numbers.push_back(frenet_traj_list.size());
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Convert to global paths
   const int num_conversion_checks = calculateGlobalPaths(frenet_traj_list, cubic_spline);
-  const std::chrono::duration<double, std::milli> convertion_time = std::chrono::high_resolution_clock::now() - start_time - generation_time;
+  numbers.push_back(num_conversion_checks);
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Check the constraints
   const int num_constraint_checks = checkConstraints(frenet_traj_list);
-  const std::chrono::duration<double, std::milli> constraint_time = std::chrono::high_resolution_clock::now() - start_time - convertion_time;
+  numbers.push_back(num_constraint_checks);
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Compute costs
   const int num_cost_checks = computeCosts(frenet_traj_list, current_speed);
-  const std::chrono::duration<double, std::milli> cost_time = std::chrono::high_resolution_clock::now() - start_time - constraint_time;
+  numbers.push_back(num_cost_checks);
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Check collisions
   int num_collision_checks = 0;
@@ -71,21 +154,16 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   {
     std::cout << "Collision Checking Skipped" << std::endl;
   }
-  const std::chrono::duration<double, std::milli> collision_time = std::chrono::high_resolution_clock::now() - start_time - cost_time;
+  numbers.push_back(num_collision_checks);
+  const auto start_time = std::chrono::high_resolution_clock::now();
+  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Find the path with minimum costs
   std::vector<fop::FrenetPath> best_path_list = findBestPaths(frenet_traj_list);
 
-  // Print Summary
-  std::chrono::duration<double, std::milli> total_time = std::chrono::high_resolution_clock::now() - start_time;
-  std::cout << "Summary: " << std::endl;
-  std::cout << "Step 1 : Generated               " << num_trajs_generated   << " Trajectories in " << generation_time.count() << " ms" << std::endl;
-  std::cout << "Step 2 : Converted               " << num_conversion_checks << " Trajectories in " << convertion_time.count() << " ms" << std::endl;
-  std::cout << "Step 3 : Checked Constraints for " << num_constraint_checks << " Trajectories in " << constraint_time.count() << " ms" << std::endl;
-  std::cout << "Step 4 : Computed Cost for       " << num_cost_checks       << " Trajectories in " << cost_time.count() << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << num_collision_checks  << " Polygon Pairs in " << collision_time.count() << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << total_time.count() << " ms" << std::endl;
-  
+  test_result_.updateCount(std::move(numbers), std::move(timestamps));
+  test_result_.printSummary();
+
   return best_path_list;
 }
 
@@ -396,12 +474,12 @@ std::pair<bool, int> FrenetOptimalTrajectoryPlanner::checkTrajCollision(const fo
       double vehicle_center_x = frenet_traj.x[i] + fop::Vehicle::Lr() * cos(frenet_traj.yaw[i]);
       double vehicle_center_y = frenet_traj.y[i] + fop::Vehicle::Lr() * sin(frenet_traj.yaw[i]);
 
-      vehicle_rect = sat_collision_checker_instance.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_traj.yaw[i], 
+      vehicle_rect = sat_collision_checker_.construct_rectangle(vehicle_center_x, vehicle_center_y, frenet_traj.yaw[i], 
                                                                         settings_.vehicle_length, settings_.vehicle_width, margin);
-      obstacle_rect = sat_collision_checker_instance.construct_rectangle(object_traj.x[i], object_traj.y[i], object_traj.yaw[i], 
+      obstacle_rect = sat_collision_checker_.construct_rectangle(object_traj.x[i], object_traj.y[i], object_traj.yaw[i], 
                                                                          object.dimensions.x, object.dimensions.y, 0.0);
 
-      if (sat_collision_checker_instance.check_collision(vehicle_rect, obstacle_rect))
+      if (sat_collision_checker_.check_collision(vehicle_rect, obstacle_rect))
       {
         return std::pair<bool, int>{false, num_checks};
       }

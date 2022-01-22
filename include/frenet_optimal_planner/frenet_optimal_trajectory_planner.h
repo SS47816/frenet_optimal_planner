@@ -36,12 +36,12 @@ namespace fop
 
 class FrenetOptimalTrajectoryPlanner
 {
-public:
-  class Setting
+ public:
+  struct Setting
   {
-  public:
-    Setting(){};
-    virtual ~Setting(){};
+   public:
+    Setting() {};
+    virtual ~Setting() {};
 
     // parameters
     double max_speed;           // maximum speed [m/s]
@@ -77,19 +77,30 @@ public:
     double k_obstacle;          // obstacle cost weight
   };
 
+  class TestResult
+  {
+   public:
+    size_t count;
+    std::vector<size_t> numbers;
+    std::vector<size_t> total_numbers;
+    std::vector<double> time;
+    std::vector<double> total_time;
+
+    TestResult();
+    void updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps);
+    void printSummary();
+  };
+
   /* --------------------------------- Methods -------------------------------- */
 
   // Constructors
-  FrenetOptimalTrajectoryPlanner(){};
-  FrenetOptimalTrajectoryPlanner(Setting settings);
+  FrenetOptimalTrajectoryPlanner();
+  FrenetOptimalTrajectoryPlanner(Setting& settings);
 
   // Destructor
   virtual ~FrenetOptimalTrajectoryPlanner(){};
 
-  void updateSettings(Setting settings)
-  {
-    this->settings_ = settings;
-  }
+  void updateSettings(Setting& settings);
 
   /* Public Functions */
   // Generate reference curve as the frenet s coordinate
@@ -112,7 +123,8 @@ public:
 
 private:
   Setting settings_;
-  SATCollisionChecker sat_collision_checker_instance;
+  TestResult test_result_;
+  SATCollisionChecker sat_collision_checker_;
   
   /* Private Functions */
   // Sample candidate trajectories
