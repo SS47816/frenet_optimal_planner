@@ -191,7 +191,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   if (obstacles->objects.empty())
   {
     ROS_WARN("Local Planner: No obstacles received");
-    // publishEmptyPathsAndStop();
+    // publishEmptyTrajsAndStop();
     // return;
   }
   if (SETTINGS_UPDATED)
@@ -206,7 +206,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   if (!feedWaypoints())
   {
     ROS_WARN("Local Planner: Waiting for Waypoints");
-    publishEmptyPathsAndStop();
+    publishEmptyTrajsAndStop();
     return;
   }
 
@@ -220,7 +220,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   if (ref_spline_.x.empty())
   {
     ROS_ERROR("Local Planner: Reference Curve could not be be generated, No path generated");
-    publishEmptyPathsAndStop();
+    publishEmptyTrajsAndStop();
     return;
   }
   ROS_INFO("Local Planner: Reference Curve Generated");
@@ -235,14 +235,14 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
 
   // Find the best path from the all candidates 
   fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
-  ROS_INFO("Local Planner: Best Paths Selected");
+  ROS_INFO("Local Planner: Best trajs Selected");
 
   // Concatenate the best path into output_path
   concatPath(best_traj, TRAJ_MAX_SIZE, TRAJ_MIN_SIZE, WP_MAX_SEP, WP_MIN_SEP);
 
-  // Publish the best paths
+  // Publish the best trajs
   publishRefSpline(ref_spline_);
-  publishCandidateTrajs();
+  publishCandidateTrajs(*frenet_planner_.candidate_trajs_);
   publishCurrTraj(curr_trajectory_);
   publishNextTraj(best_traj);
 
@@ -365,24 +365,20 @@ void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
 }
 
 /**
- * @brief publish candidate paths for visualization in rviz
+ * @brief publish candidate trajs for visualization in rviz
  * 
  */
-void FrenetOptimalPlannerNode::publishCandidateTrajs()
+void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<fop::FrenetPath>& candidate_trajs)
 {
-  // visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidatePaths(
-  //   frenet_planner_.safest_paths, frenet_planner_.close_proximity_paths,
-  //   frenet_planner_.unsafe_paths, frenet_planner_.backup_unchecked_paths,
-  //   frenet_planner_.backup_safest_paths, frenet_planner_.backup_close_proximity_paths,
-  //   frenet_planner_.backup_unsafe_paths);
+  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, fop::Vehicle::max_speed());
 
-  // candidate_paths_pub.publish(candidate_paths_markers);
+  candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
 
-// Publish empty paths (for Rviz only)
-void FrenetOptimalPlannerNode::publishEmptyPathsAndStop()
+// Publish empty trajs (for Rviz only)
+void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
 {
-  // Publish empty paths
+  // Publish empty trajs
   publishRefSpline(fop::Path());
   publishCurrTraj(fop::Path());
   publishNextTraj(fop::FrenetPath());

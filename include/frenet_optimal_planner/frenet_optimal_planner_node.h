@@ -82,7 +82,7 @@ class FrenetOptimalPlannerNode
   // Trajectory Sampling States
   fop::FrenetState start_state_;       // Starting States for sampling
   
-  // Maps and Paths
+  // Maps and Trajs
   fop::Lane lane_;                      // Maps (All the waypoints)
   fop::Lane local_lane_;                // Selected Waypoints
   fop::Path ref_spline_;                // Reference Spline
@@ -119,12 +119,12 @@ class FrenetOptimalPlannerNode
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles);
 
   // Functions fo publishing results
-  void publishEmptyPathsAndStop();
+  void publishEmptyTrajsAndStop();
   void publishRefSpline(const fop::Path& path);
   void publishCurrTraj(const fop::Path& path);
   void publishNextTraj(const fop::FrenetPath& next_traj);
   void publishVehicleCmd(const double accel, const double angle);
-  void publishCandidateTrajs();
+  void publishCandidateTrajs(const std::vector<fop::FrenetPath>& candidate_trajs);
 
   // Planner Helper Functions
   bool feedWaypoints();

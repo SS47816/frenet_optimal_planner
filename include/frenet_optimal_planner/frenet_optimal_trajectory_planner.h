@@ -110,16 +110,8 @@ class FrenetOptimalTrajectoryPlanner
   std::vector<fop::FrenetPath> frenetOptimalPlanning(fop::Spline2D& cubic_spline, const fop::FrenetState& frenet_state, const int lane_id,
                                                      const double left_width, const double right_width, const double current_speed, 
                                                      const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
-
-  /* ------------------------ variables (visualization) ----------------------- */
-  std::vector<fop::FrenetPath> safest_paths;
-  std::vector<fop::FrenetPath> unsafe_paths;
-
-  // std::vector<fop::FrenetPath> close_proximity_paths;
-  // std::vector<fop::FrenetPath> backup_unchecked_paths;
-  // std::vector<fop::FrenetPath> backup_safest_paths;
-  // std::vector<fop::FrenetPath> backup_close_proximity_paths;
-  // std::vector<fop::FrenetPath> backup_unsafe_paths;
+  
+  std::shared_ptr<std::vector<fop::FrenetPath>> candidate_trajs_;
 
 private:
   Setting settings_;

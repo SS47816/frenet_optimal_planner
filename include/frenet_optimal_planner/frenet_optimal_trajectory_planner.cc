@@ -126,22 +126,22 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   
   // Sample a list of FrenetPaths
-  std::vector<fop::FrenetPath> frenet_traj_list = generateFrenetPaths(frenet_state, lane_id, settings_.centre_offset, left_width, right_width, settings_.target_speed, current_speed);
-  numbers.push_back(frenet_traj_list.size());
+  candidate_trajs_ = std::make_shared<std::vector<fop::FrenetPath>>(generateFrenetPaths(frenet_state, lane_id, settings_.centre_offset, left_width, right_width, settings_.target_speed, current_speed));
+  numbers.push_back(candidate_trajs_->size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Convert to global paths
-  const int num_conversion_checks = calculateGlobalPaths(frenet_traj_list, cubic_spline);
+  const int num_conversion_checks = calculateGlobalPaths(*candidate_trajs_, cubic_spline);
   numbers.push_back(num_conversion_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Check the constraints
-  const int num_constraint_checks = checkConstraints(frenet_traj_list);
+  const int num_constraint_checks = checkConstraints(*candidate_trajs_);
   numbers.push_back(num_constraint_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Compute costs
-  const int num_cost_checks = computeCosts(frenet_traj_list, current_speed);
+  const int num_cost_checks = computeCosts(*candidate_trajs_, current_speed);
   numbers.push_back(num_cost_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
@@ -149,7 +149,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   int num_collision_checks = 0;
   if (check_collision)
   {
-    num_collision_checks = checkCollisions(frenet_traj_list, obstacles, use_async);
+    num_collision_checks = checkCollisions(*candidate_trajs_, obstacles, use_async);
   }
   else
   {
@@ -160,7 +160,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Find the path with minimum costs
-  std::vector<fop::FrenetPath> best_path_list = findBestPaths(frenet_traj_list);
+  std::vector<fop::FrenetPath> best_path_list = findBestPaths(*candidate_trajs_);
 
   test_result_.updateCount(std::move(numbers), std::move(timestamps));
   test_result_.printSummary();

@@ -174,7 +174,7 @@ public:
     return array_1;
   }
 
-  static visualization_msgs::Marker initializeMarker(int& marker_id, std::string ns, COLOR color, double marker_scale,
+  static visualization_msgs::Marker initializeMarker(int& marker_id, std::string ns, std_msgs::ColorRGBA color, double marker_scale,
                                                      int32_t marker_type, bool infinite_duration = false)
   {
     visualization_msgs::Marker marker;
@@ -189,7 +189,7 @@ public:
     marker.scale.x = marker_scale;
     marker.scale.y = marker_scale;
     marker.scale.z = marker_scale;
-    marker.color = getColor(color);
+    marker.color = color;
 
     return marker;
   }
@@ -216,7 +216,7 @@ public:
                                                     bool infinite_duration = false, bool flatten = false)
   {
     visualization_msgs::Marker polygon_marker =
-        initializeMarker(marker_id, ns, color, marker_scale, visualization_msgs::Marker::LINE_STRIP, infinite_duration);
+        initializeMarker(marker_id, ns, getColor(color), marker_scale, visualization_msgs::Marker::LINE_STRIP, infinite_duration);
 
     for (auto const& point : polygon.points)
     {
@@ -233,7 +233,7 @@ public:
                                                   std::string ns, double marker_scale, bool infinite_duration = false)
   {
     visualization_msgs::Marker point_marker =
-        initializeMarker(marker_id, ns, color, marker_scale, visualization_msgs::Marker::SPHERE, infinite_duration);
+        initializeMarker(marker_id, ns, getColor(color), marker_scale, visualization_msgs::Marker::SPHERE, infinite_duration);
 
     point_marker.pose.position = point;
 
@@ -256,18 +256,18 @@ public:
     return point_markers;
   }
 
-  static visualization_msgs::Marker pathToMarker(const nav_msgs::Path path, int& marker_id, COLOR color, std::string ns,
+  static visualization_msgs::Marker trajToMarker(const nav_msgs::Path traj, int& marker_id, COLOR color, std::string ns,
                                                  double marker_scale, bool infinite_duration = false)
   {
-    visualization_msgs::Marker path_marker =
-        initializeMarker(marker_id, ns, color, marker_scale, visualization_msgs::Marker::LINE_STRIP, infinite_duration);
+    visualization_msgs::Marker traj_marker =
+        initializeMarker(marker_id, ns, getColor(color), marker_scale, visualization_msgs::Marker::LINE_STRIP, infinite_duration);
 
-    for (auto pose_stamped : path.poses)
+    for (auto pose_stamped : traj.poses)
     {
-      path_marker.points.push_back(pose_stamped.pose.position);
+      traj_marker.points.push_back(pose_stamped.pose.position);
     }
 
-    return path_marker;
+    return traj_marker;
   }
 
   static visualization_msgs::MarkerArray posesToMarkers(const geometry_msgs::PoseArray pose_arr, int& marker_id,
@@ -298,7 +298,7 @@ public:
                                                    bool infinite_duration = false)
   {
     visualization_msgs::Marker text_marker = initializeMarker(
-        marker_id, ns, color, marker_scale, visualization_msgs::Marker::TEXT_VIEW_FACING, infinite_duration);
+        marker_id, ns, getColor(color), marker_scale, visualization_msgs::Marker::TEXT_VIEW_FACING, infinite_duration);
 
     text_marker.text = str;
     text_marker.pose.position = marker_pos;
@@ -306,14 +306,14 @@ public:
     return text_marker;
   }
 
-  static visualization_msgs::Marker meshToMarker(const std::string mesh_file_path,
+  static visualization_msgs::Marker meshToMarker(const std::string mesh_file_traj,
                                                  const geometry_msgs::Pose marker_pose, int& marker_id, COLOR color,
                                                  std::string ns, double marker_scale, bool infinite_duration = false)
   {
     visualization_msgs::Marker mesh_marker = initializeMarker(
-        marker_id, ns, color, marker_scale, visualization_msgs::Marker::MESH_RESOURCE, infinite_duration);
+        marker_id, ns, getColor(color), marker_scale, visualization_msgs::Marker::MESH_RESOURCE, infinite_duration);
 
-    mesh_marker.mesh_resource = mesh_file_path;
+    mesh_marker.mesh_resource = mesh_file_traj;
     mesh_marker.pose = marker_pose;
 
     return mesh_marker;
@@ -322,68 +322,64 @@ public:
 class LocalPlannerVisualization : public Visualization
 {
 public:
-  static visualization_msgs::MarkerArray visualizeCandidatePaths(std::vector<FrenetPath> safest_paths,
-                                                                 std::vector<FrenetPath> close_proximity_paths,
-                                                                 std::vector<FrenetPath> unsafe_paths,
-                                                                 std::vector<FrenetPath> backup_unchecked_paths,
-                                                                 std::vector<FrenetPath> backup_safest_paths,
-                                                                 std::vector<FrenetPath> backup_close_proximity_paths,
-                                                                 std::vector<FrenetPath> backup_unsafe_paths)
+  static visualization_msgs::MarkerArray visualizeCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs,
+                                                                 const double z_map, const double max_speed)
   {
-    visualization_msgs::MarkerArray candidate_paths_markers;
-    visualization_msgs::MarkerArray safest_paths_markers;
-    visualization_msgs::MarkerArray close_proximity_paths_markers;
-    visualization_msgs::MarkerArray unsafe_paths_markers;
-    visualization_msgs::MarkerArray backup_unchecked_paths_markers;
-    visualization_msgs::MarkerArray backup_safest_paths_markers;
-    visualization_msgs::MarkerArray backup_close_proximity_paths_markers;
-    visualization_msgs::MarkerArray backup_unsafe_paths_markers;
+    visualization_msgs::MarkerArray safest_trajs_markers;
+    visualization_msgs::MarkerArray close_proximity_trajs_markers;
+    visualization_msgs::MarkerArray unsafe_trajs_markers;
 
     int marker_id = 0;
+    visualization_msgs::MarkerArray candidate_trajs_markers;
 
-    safest_paths_markers = frenetPathsToMarkers(safest_paths, marker_id, "safest", GREEN);
-    close_proximity_paths_markers = frenetPathsToMarkers(close_proximity_paths, marker_id, "close_proximity", ORANGE);
-    unsafe_paths_markers = frenetPathsToMarkers(unsafe_paths, marker_id, "unsafe", RED);
-
-    backup_unchecked_paths_markers = frenetPathsToMarkers(backup_unchecked_paths, marker_id, "backup_unchecked", BLACK);
-    backup_safest_paths_markers = frenetPathsToMarkers(backup_safest_paths, marker_id, "backup_safest", DARK_GREEN);
-    backup_close_proximity_paths_markers =
-        frenetPathsToMarkers(backup_close_proximity_paths, marker_id, "backup_close_proximity", BLUE);
-    backup_unsafe_paths_markers = frenetPathsToMarkers(backup_unsafe_paths, marker_id, "backup_unsafe", DARK_RED);
-
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, safest_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, close_proximity_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, unsafe_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, backup_unchecked_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, backup_safest_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, backup_close_proximity_paths_markers);
-    candidate_paths_markers = concatMarkerArrays(candidate_paths_markers, backup_unsafe_paths_markers);
-
-    return candidate_paths_markers;
-  }
-
-  static visualization_msgs::MarkerArray frenetPathsToMarkers(std::vector<FrenetPath>& paths, int& marker_id,
-                                                              std::string ns, COLOR color)
-  {
-    visualization_msgs::MarkerArray path_markers;
-
-    for (auto path : paths)
+    // Find the min and max costs to determin the color code
+    double min_cost = 10000.0;
+    double max_cost = 0.0;
+    for (const auto& traj : candidate_trajs)
     {
-      visualization_msgs::Marker path_marker =
-          initializeMarker(marker_id, ns, color, CANDIDATE_PATH_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
-
-      for (int i = 0; i < path.c.size(); i++)
-      {
-        geometry_msgs::Point tmp_point;
-        tmp_point.x = path.x.at(i);
-        tmp_point.y = path.y.at(i);
-        tmp_point.z = 0;
-        path_marker.points.push_back(tmp_point);
-      }
-      path_markers.markers.push_back(path_marker);
+      min_cost = std::min(min_cost, traj.cf);
+      max_cost = std::max(max_cost, traj.cf);
     }
 
-    return path_markers;
+    for (const auto& traj : candidate_trajs)
+    {
+      if (!traj.constraint_passed)
+      {
+        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "unsmooth", getColor(COLOR::RED), z_map, max_speed));
+      }
+      else if (!traj.collision_passed)
+      {
+        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "unsafe", getColor(COLOR::DARK_RED), z_map, max_speed));
+      }
+      else
+      {
+        const double R = 1.0*traj.cf/max_cost;
+        const double G = 0.7*traj.cf/min_cost;
+        std_msgs::ColorRGBA color = parseColor(R, G, 0.2, 0.8);
+        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "safe", color, z_map, max_speed));
+      }
+    }
+
+    return candidate_trajs_markers;
+  }
+
+  static visualization_msgs::Marker frenetPathToMarker(const fop::FrenetPath& traj, int& marker_id, const std::string ns, const std_msgs::ColorRGBA color, 
+                                                       const double z_map, const double max_speed)
+  {
+    visualization_msgs::Marker traj_marker = initializeMarker(marker_id, ns, color, CANDIDATE_PATH_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
+
+    for (int i = 0; i < traj.c.size(); i++)
+    {
+      geometry_msgs::Point tmp_point;
+      if (!fop::isLegal(traj.x[i]) || !fop::isLegal(traj.y[i]))
+        break;
+      tmp_point.x = traj.x[i];
+      tmp_point.y = traj.y[i];
+      tmp_point.z = z_map + 2.0*std::hypot(traj.s_d[i], traj.d_d[i])/max_speed;
+      traj_marker.points.push_back(tmp_point);
+    }
+
+    return traj_marker;
   }
 };
 
@@ -392,7 +388,7 @@ class CollisionDetectorVisualization : public Visualization
 public:
   static visualization_msgs::MarkerArray visualizeCollisions(
       const std::vector<geometry_msgs::Polygon> buggy_rects, const autoware_msgs::DetectedObjectArray objects,
-      const Path front_axle_path, const Path rear_axle_path, VehicleState current_state,
+      const Path front_axle_traj, const Path rear_axle_traj, VehicleState current_state,
       double vehicle_width, double safety_margin, geometry_msgs::Polygon dynamic_bumper_straight, int slowdown_mode)
   {
     int marker_id = 0;
@@ -402,8 +398,8 @@ public:
     visualization_msgs::MarkerArray obstacle_centroid_markers;
     visualization_msgs::MarkerArray obstacle_label_markers;
     visualization_msgs::MarkerArray visualization_markers;
-    visualization_msgs::Marker front_axle_path_marker;
-    visualization_msgs::Marker rear_axle_path_marker;
+    visualization_msgs::Marker front_axle_traj_marker;
+    visualization_msgs::Marker rear_axle_traj_marker;
     visualization_msgs::Marker dynamic_bumper_straight_marker;
 
     /* -------------------------------- Obstacles ------------------------------- */
@@ -417,10 +413,10 @@ public:
 
     buggy_prediction_markers = buggyPredictionsToMarkers(buggy_rects, marker_id, "buggy_predicted_positions", GREEN);
 
-    front_axle_path_marker = visualizePredictedTrajectory(front_axle_path, vehicle_width, safety_margin, current_state,
+    front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, current_state,
                                                           marker_id, "predicted_trajectory/front_axle", GREEN);
 
-    rear_axle_path_marker = visualizePredictedTrajectory(rear_axle_path, vehicle_width, safety_margin, current_state,
+    rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, current_state,
                                                          marker_id, "predicted_trajectory/rear_axle", BLUE);
 
     dynamic_bumper_straight_marker =
@@ -433,7 +429,7 @@ public:
 
     visualization_markers.markers.insert(
         visualization_markers.markers.end(),
-        { front_axle_path_marker, rear_axle_path_marker, dynamic_bumper_straight_marker });
+        { front_axle_traj_marker, rear_axle_traj_marker, dynamic_bumper_straight_marker });
 
     return visualization_markers;
   }
@@ -576,12 +572,12 @@ public:
     return label_markers;
   }
 
-  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& path, double vehicle_width,
+  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, double vehicle_width,
                                                                  double safety_margin, VehicleState current_state,
                                                                  int& marker_id, std::string ns, COLOR color)
   {
     visualization_msgs::Marker predicted_trajectory_marker = initializeMarker(
-        marker_id, ns, color, PREDICTED_TRAJECTORY_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
+        marker_id, ns, getColor(color), PREDICTED_TRAJECTORY_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
 
     std::vector<geometry_msgs::Point32> left_bound;
     std::vector<geometry_msgs::Point32> right_bound;
@@ -592,9 +588,9 @@ public:
     left_bound.push_back(left_right_points.at(0));
     right_bound.push_back(left_right_points.at(1));
 
-    for (int i = 0; i < path.x.size(); i++)
+    for (int i = 0; i < traj.x.size(); i++)
     {
-      left_right_points = getBothSidesPoints(path.x.at(i), path.y.at(i), path.yaw.at(i), vehicle_width, safety_margin);
+      left_right_points = getBothSidesPoints(traj.x[i], traj.y[i], traj.yaw[i], vehicle_width, safety_margin);
       left_bound.push_back(left_right_points.at(0));
       right_bound.push_back(left_right_points.at(1));
     }
@@ -602,9 +598,9 @@ public:
     for (int i = 0; i < left_bound.size(); i++)
     {
       geometry_msgs::Point tmp_point;
-      tmp_point.x = left_bound.at(i).x;
-      tmp_point.y = left_bound.at(i).y;
-      tmp_point.z = left_bound.at(i).z;
+      tmp_point.x = left_bound[i].x;
+      tmp_point.y = left_bound[i].y;
+      tmp_point.z = left_bound[i].z;
 
       predicted_trajectory_marker.points.push_back(tmp_point);
     }
@@ -747,51 +743,51 @@ class LanePublisherVisualization : public Visualization
 private:
   static constexpr const char* turning_points_ns = "turning_points";
   static constexpr const char* slope_points_ns = "slope_points";
-  static constexpr const char* current_path_ns = "current_path";
+  static constexpr const char* current_traj_ns = "current_traj";
   static constexpr const char* lane_boundary_ns = "lane_boundary";
   static constexpr const char* lane_center_ns = "lane_center";
 
 public:
   static visualization_msgs::MarkerArray visualizeLanes(
       const nav_msgs::Path lane_boundary_1, const nav_msgs::Path lane_boundary_2, const nav_msgs::Path lane_center,
-      const geometry_msgs::PoseArray current_path, std::vector<geometry_msgs::Point> slope_points,
+      const geometry_msgs::PoseArray current_traj, std::vector<geometry_msgs::Point> slope_points,
       std::vector<geometry_msgs::Point> turning_points, const geometry_msgs::Point end_point)
   {
     int marker_id = 0;
     visualization_msgs::MarkerArray lane_markers;
     visualization_msgs::MarkerArray turning_point_markers;
     visualization_msgs::MarkerArray slope_point_markers;
-    visualization_msgs::MarkerArray current_path_markers;
+    visualization_msgs::MarkerArray current_traj_markers;
     visualization_msgs::Marker lane_boundary_1_marker;
     visualization_msgs::Marker lane_boundary_2_marker;
     visualization_msgs::Marker lane_center_marker;
-    visualization_msgs::Marker current_path_marker;
+    visualization_msgs::Marker current_traj_marker;
     visualization_msgs::Marker end_point_marker;
 
     end_point_marker = endPointToMarker(end_point, marker_id);
-    lane_boundary_1_marker = pathToMarker(lane_boundary_1, marker_id, BLACK, lane_boundary_ns, LANE_MARKER_SCALE, true);
-    lane_boundary_2_marker = pathToMarker(lane_boundary_2, marker_id, BLACK, lane_boundary_ns, LANE_MARKER_SCALE, true);
-    lane_center_marker = pathToMarker(lane_center, marker_id, WHITE, lane_center_ns, LANE_MARKER_SCALE, true);
+    lane_boundary_1_marker = trajToMarker(lane_boundary_1, marker_id, BLACK, lane_boundary_ns, LANE_MARKER_SCALE, true);
+    lane_boundary_2_marker = trajToMarker(lane_boundary_2, marker_id, BLACK, lane_boundary_ns, LANE_MARKER_SCALE, true);
+    lane_center_marker = trajToMarker(lane_center, marker_id, WHITE, lane_center_ns, LANE_MARKER_SCALE, true);
 
     for (int i = 0; i < turning_points.size(); i++)
     {
-      turning_points.at(i).z = 1.0;
+      turning_points[i].z = 1.0;
     }
 
     for (int i = 0; i < slope_points.size(); i++)
     {
-      slope_points.at(i).z = 2.0;
+      slope_points[i].z = 2.0;
     }
 
     turning_point_markers =
         pointsToMarkers(turning_points, marker_id, RED, turning_points_ns, SPECIAL_WAYPOINT_MARKER_SCALE, true);
     slope_point_markers =
         pointsToMarkers(slope_points, marker_id, BLUE, slope_points_ns, SPECIAL_WAYPOINT_MARKER_SCALE, true);
-    current_path_markers = posesToMarkers(current_path, marker_id, RED, current_path_ns, ARROW_MARKER_LENGTH, true);
+    current_traj_markers = posesToMarkers(current_traj, marker_id, RED, current_traj_ns, ARROW_MARKER_LENGTH, true);
 
     lane_markers = concatMarkerArrays(lane_markers, turning_point_markers);
     lane_markers = concatMarkerArrays(lane_markers, slope_point_markers);
-    lane_markers = concatMarkerArrays(lane_markers, current_path_markers);
+    lane_markers = concatMarkerArrays(lane_markers, current_traj_markers);
 
     lane_markers.markers.insert(lane_markers.markers.end(), { end_point_marker, lane_boundary_1_marker,
                                                               lane_boundary_2_marker, lane_center_marker });
