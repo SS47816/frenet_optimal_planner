@@ -43,7 +43,6 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
   for (int i = 0; i < timestamps.size() - 1; i++)
   {
     const std::chrono::duration<double, std::milli> elapsed_time = timestamps[i+1] - timestamps[i];
-    std::cout << elapsed_time.count() << std::endl;
     this->time[i] = elapsed_time.count();
   }
   const std::chrono::duration<double, std::milli> elapsed_time = timestamps.back() - timestamps.front();
@@ -222,8 +221,8 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
       }
 
       // generate longitudinal quartic polynomial
-      const double min_sample_speed = settings_.target_speed - (settings_.num_speed_sample - 1)/2*settings_.delta_speed;
-      const double max_sample_speed = settings_.target_speed + (settings_.num_speed_sample - 1)/2*settings_.delta_speed;
+      const double min_sample_speed = settings_.target_speed - (settings_.num_speed_sample - 1)*settings_.delta_speed;
+      const double max_sample_speed = settings_.target_speed;
       for (double sample_speed = min_sample_speed; sample_speed <= max_sample_speed; sample_speed += settings_.delta_speed)
       {
         if (sample_speed <= 0)  // ensure target speed is positive

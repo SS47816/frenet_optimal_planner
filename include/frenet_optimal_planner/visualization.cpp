@@ -371,7 +371,7 @@ public:
     for (int i = 0; i < traj.c.size(); i++)
     {
       geometry_msgs::Point tmp_point;
-      if (!fop::isLegal(traj.x[i]) || !fop::isLegal(traj.y[i]))
+      if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
         break;
       tmp_point.x = traj.x[i];
       tmp_point.y = traj.y[i];
