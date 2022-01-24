@@ -124,13 +124,13 @@ private:
   FrenetPath generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state);
 
   // Convert paths from frenet frame to gobal map frame
-  int calculateGlobalPaths(std::vector<FrenetPath>& frenet_traj_list, Spline2D& cubic_spline);
+  void convertToGlobalFrame(FrenetPath& frenet_traj, Spline2D& cubic_spline);
 
   // Compute costs for candidate trajectories
-  int computeCosts(std::vector<FrenetPath>& frenet_trajs, const double curr_speed);
+  void computeTrajCost(FrenetPath& traj);
 
   // Check for vehicle kinematic constraints
-  int checkConstraints(std::vector<FrenetPath>& frenet_traj_list);
+  void checkConstraints(FrenetPath& traj);
 
   // Check for collisions and calculate obstacle cost
   int checkCollisions(std::vector<FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);

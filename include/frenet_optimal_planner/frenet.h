@@ -55,7 +55,10 @@ class FrenetPath
   bool constraint_passed;
   bool collision_passed;
   // costs
-  double cd, cs, cf;
+  double fix_cost;
+  double est_cost;
+  double dyn_cost;
+  double final_cost;
   
   // time list
   std::vector<double> t;

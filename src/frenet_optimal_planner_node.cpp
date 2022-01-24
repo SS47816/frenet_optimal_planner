@@ -610,17 +610,17 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
       // keep lane option
       if (best_traj_list[i].lane_id == current_lane || best_traj_list[i].lane_id == 0)
       {
-        if (best_traj_list[i].cf < keep_lane_cost)
+        if (best_traj_list[i].final_cost < keep_lane_cost)
         {
           keep_lane_id = i;
-          keep_lane_cost = best_traj_list[i].cf;
+          keep_lane_cost = best_traj_list[i].final_cost;
         }
       }
       // change lane option
       else
       {
         change_lane_id = i;
-        change_lane_cost = best_traj_list[i].cf;
+        change_lane_cost = best_traj_list[i].final_cost;
       }
     }
   }

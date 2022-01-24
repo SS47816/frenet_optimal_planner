@@ -123,27 +123,45 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   std::vector<size_t> numbers;
   std::vector<std::chrono::_V2::system_clock::time_point> timestamps;
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
+
+  /* --------------------------------- Construction Zone -------------------------------- */
   
   // Sample a list of FrenetPaths
   std::vector<FrenetState> end_states = sampleEndStates(lane_id, left_width, right_width, current_speed);
+
+  for (const auto& end_state : end_states)
+  {
+    // Generate the Trajectory accordingly
+    FrenetPath candidate_traj = generateFrenetPath(start_state, end_state);
+    // Convert to the global frame
+    convertToGlobalFrame(candidate_traj, cubic_spline);
+    // Compute real costs
+    computeTrajCost(candidate_traj);
+    checkConstraints(candidate_traj);
+    
+  }
+
+  /* --------------------------------- Construction Zone -------------------------------- */
+
+
   // generateFrenetPaths(start_state, end_state);
   candidate_trajs_ = std::make_shared<std::vector<FrenetPath>>();
   numbers.push_back(candidate_trajs_->size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Convert to global paths
-  const int num_conversion_checks = calculateGlobalPaths(*candidate_trajs_, cubic_spline);
-  numbers.push_back(num_conversion_checks);
+  // const int num_conversion_checks = calculateGlobalPaths(*candidate_trajs_, cubic_spline);
+  // numbers.push_back(num_conversion_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Check the constraints
-  const int num_constraint_checks = checkConstraints(*candidate_trajs_);
-  numbers.push_back(num_constraint_checks);
+  // const int num_constraint_checks = checkConstraints(*candidate_trajs_);
+  // numbers.push_back(num_constraint_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Compute costs
-  const int num_cost_checks = computeCosts(*candidate_trajs_, current_speed);
-  numbers.push_back(num_cost_checks);
+  // const int num_cost_checks = computeCosts(*candidate_trajs_, current_speed);
+  // numbers.push_back(num_cost_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   // Check collisions
@@ -246,146 +264,108 @@ FrenetPath FrenetOptimalTrajectoryPlanner::generateFrenetPath(const FrenetState&
     frenet_traj.s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
     frenet_traj.s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
   }
+
+  // Pass the pre-computed costs to trajectory
+  frenet_traj.fix_cost = end_state.fix_cost;
   
   return frenet_traj;
 }
 
-int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<FrenetPath>& frenet_traj_list, Spline2D& cubic_spline)
+void FrenetOptimalTrajectoryPlanner::convertToGlobalFrame(FrenetPath& frenet_traj, Spline2D& cubic_spline)
 {
-  int num_checks = 0;
-  for (int i = 0; i < frenet_traj_list.size(); i++)
+  // calculate global positions
+  for (int j = 0; j < frenet_traj.s.size(); j++)
   {
-    // calculate global positions
-    for (int j = 0; j < frenet_traj_list[i].s.size(); j++)
+    VehicleState state = cubic_spline.calculatePosition(frenet_traj.s[j]);
+    double i_yaw = cubic_spline.calculateYaw(frenet_traj.s[j]);
+    const double di = frenet_traj.d[j];
+    const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
+    const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
+    if (!isLegal(frenet_x) || !isLegal(frenet_y))
     {
-      VehicleState state = cubic_spline.calculatePosition(frenet_traj_list[i].s[j]);
-      double i_yaw = cubic_spline.calculateYaw(frenet_traj_list[i].s[j]);
-      const double di = frenet_traj_list[i].d[j];
-      const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
-      const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
-      if (!isLegal(frenet_x) || !isLegal(frenet_y))
-      {
-        break;
-      }
-      else
-      {
-        frenet_traj_list[i].x.emplace_back(frenet_x);
-        frenet_traj_list[i].y.emplace_back(frenet_y);
-      }
+      break;
     }
-    // calculate yaw and ds
-    for (int j = 0; j < frenet_traj_list[i].x.size() - 1; j++)
+    else
     {
-      const double dx = frenet_traj_list[i].x[j+1] - frenet_traj_list[i].x[j];
-      const double dy = frenet_traj_list[i].y[j+1] - frenet_traj_list[i].y[j];
-      frenet_traj_list[i].yaw.emplace_back(atan2(dy, dx));
-      frenet_traj_list[i].ds.emplace_back(sqrt(dx * dx + dy * dy));
+      frenet_traj.x.emplace_back(frenet_x);
+      frenet_traj.y.emplace_back(frenet_y);
     }
-
-    frenet_traj_list[i].yaw.emplace_back(frenet_traj_list[i].yaw.back());
-    frenet_traj_list[i].ds.emplace_back(frenet_traj_list[i].ds.back());
-
-    // calculate curvature
-    for (int j = 0; j < frenet_traj_list[i].yaw.size() - 1; j++)
-    {
-      double yaw_diff = unifyAngleRange(frenet_traj_list[i].yaw[j+1] - frenet_traj_list[i].yaw[j]);
-      frenet_traj_list[i].c.emplace_back(yaw_diff / frenet_traj_list[i].ds[j]);
-    }
-
-    num_checks++;
+  }
+  // calculate yaw and ds
+  for (int j = 0; j < frenet_traj.x.size() - 1; j++)
+  {
+    const double dx = frenet_traj.x[j+1] - frenet_traj.x[j];
+    const double dy = frenet_traj.y[j+1] - frenet_traj.y[j];
+    frenet_traj.yaw.emplace_back(atan2(dy, dx));
+    frenet_traj.ds.emplace_back(sqrt(dx * dx + dy * dy));
   }
 
-  return num_checks;
+  frenet_traj.yaw.emplace_back(frenet_traj.yaw.back());
+  frenet_traj.ds.emplace_back(frenet_traj.ds.back());
+
+  // calculate curvature
+  for (int j = 0; j < frenet_traj.yaw.size() - 1; j++)
+  {
+    double yaw_diff = unifyAngleRange(frenet_traj.yaw[j+1] - frenet_traj.yaw[j]);
+    frenet_traj.c.emplace_back(yaw_diff / frenet_traj.ds[j]);
+  }
+}
+
+void FrenetOptimalTrajectoryPlanner::computeTrajCost(FrenetPath& traj)
+{
+  // calculate the costs
+  double jerk_s = 0.0;
+  double jerk_d = 0.0;
+  // calculate total squared jerks
+  for (int i = 0; i < traj.t.size(); i++)
+  {
+    jerk_s += std::pow(traj.s_ddd[i], 2);
+    jerk_d += std::pow(traj.d_ddd[i], 2);
+  }
+
+  traj.dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_s + settings_.k_lat * jerk_d);
+  traj.final_cost = traj.fix_cost + traj.dyn_cost;
 }
 
 /**
- * @brief Checks whether frenet paths are safe to execute based on constraints and whether there is a collision along a
- * path
- *
- * @param frenet_traj_list the vector of paths to check
- * @param obstacles obstacles to check against for collision
- * @return vector containing the safe paths. If there are no safe paths, a dummy vector is returned.
+ * @brief Checks whether frenet paths are safe to execute based on constraints 
+ * @param traj the trajectory to be checked
+ * @return void
  */
-
-int FrenetOptimalTrajectoryPlanner::checkConstraints(std::vector<FrenetPath>& frenet_traj_list)
+void FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
 {
-  int num_passed = 0;
-  int num_checks = 0;
-  for (auto& frenet_traj : frenet_traj_list)
+  bool passed = true;
+  for (int j = 0; j < traj.c.size(); j++)
   {
-    bool passed = true;
-    for (int j = 0; j < frenet_traj.c.size(); j++)
+    if (!isLegal(traj.x[j]) || !isLegal(traj.y[j]))
     {
-      if (!isLegal(frenet_traj.x[j]) || !isLegal(frenet_traj.y[j]))
-      {
-        passed = false;
-        // std::cout << "Condition 0: Contains ilegal values" << std::endl;
-        break;
-      }
-      else if (frenet_traj.s_d[j] > settings_.max_speed)
-      {
-        passed = false;
-        // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
-        break;
-      }
-      else if (frenet_traj.s_dd[j] > settings_.max_accel || frenet_traj.s_dd[j] < settings_.max_decel)
-      {
-        passed = false;
-        // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
-        break;
-      }
-      else if (std::abs(frenet_traj.c[j]) > settings_.max_curvature)
-      {
-        passed = false;
-        // std::cout << "Exceeded max curvature = " << settings_.max_curvature
-        //           << ". Curr curvature = " << (frenet_traj.c[j]) << std::endl;
-        break;
-      }
+      passed = false;
+      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      break;
     }
-
-    frenet_traj.constraint_passed = passed;
-    num_passed += passed? 1 : 0;
-    num_checks++;
+    else if (traj.s_d[j] > settings_.max_speed)
+    {
+      passed = false;
+      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      break;
+    }
+    else if (traj.s_dd[j] > settings_.max_accel || traj.s_dd[j] < settings_.max_decel)
+    {
+      passed = false;
+      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      break;
+    }
+    else if (std::abs(traj.c[j]) > settings_.max_curvature)
+    {
+      passed = false;
+      // std::cout << "Exceeded max curvature = " << settings_.max_curvature
+      //           << ". Curr curvature = " << (traj.c[j]) << std::endl;
+      break;
+    }
   }
 
-  std::cout << "Constraints checked for " << frenet_traj_list.size() << " trajectories, with " << num_passed << " passed" << std::endl;
-  return num_checks;
+  traj.constraint_passed = passed;
 }
-
-int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<FrenetPath>& frenet_trajs, const double curr_speed)
-{
-  int num_checks = 0;
-  for (auto& traj : frenet_trajs)
-  {
-    if (!traj.constraint_passed)
-      continue;
-
-    // calculate the costs
-    double jerk_s = 0.0;
-    double jerk_d = 0.0;
-    // calculate total squared jerks
-    for (int i = 0; i < traj.t.size(); i++)
-    {
-      jerk_s += std::pow(traj.s_ddd[i], 2);
-      jerk_d += std::pow(traj.d_ddd[i], 2);
-    }
-
-    // encourage driving inbetween the desired speed and current speed
-    const double speed_diff = std::pow(settings_.highest_speed - traj.s_d.back(), 2) + 0.5*std::pow(curr_speed - traj.s_d.back(), 2);
-
-    // encourage longer planning time
-    const double planning_time_cost = settings_.k_time * (1 - traj.t.size()*settings_.tick_t / settings_.max_t);
-
-    traj.cd = settings_.k_jerk * jerk_d + planning_time_cost + settings_.k_diff * std::pow(traj.d.back() - settings_.center_offset, 2);
-    traj.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff;
-    traj.cf = settings_.k_lat * traj.cd + settings_.k_lon * traj.cs;
-    
-    num_checks++;
-  }
-
-  return num_checks;
-}
-
 
 int FrenetOptimalTrajectoryPlanner::checkCollisions(std::vector<FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async)
 {
@@ -540,9 +520,9 @@ FrenetPath FrenetOptimalTrajectoryPlanner::findBestPath(const std::vector<Frenet
         {
           found_path_in_target_lane = true;
 
-          if (min_cost >= frenet_traj_list[i].cf)
+          if (min_cost >= frenet_traj_list[i].final_cost)
           {
-            min_cost = frenet_traj_list[i].cf;
+            min_cost = frenet_traj_list[i].final_cost;
             best_path_id = i;
           }
         }
