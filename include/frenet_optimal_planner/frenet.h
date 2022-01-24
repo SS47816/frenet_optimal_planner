@@ -29,6 +29,7 @@ class FrenetState
   // Destructor
   virtual ~FrenetState(){};
 
+  int lane_id;
   double s;
   double s_d;
   double s_dd;
@@ -37,6 +38,8 @@ class FrenetState
   double d_d;
   double d_dd;
   double d_ddd;
+  double T;
+  double fix_cost;
 };
 
 class FrenetPath

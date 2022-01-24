@@ -14,14 +14,13 @@ QuarticPolynomial::QuarticPolynomial(const std::vector<double> &start, const std
 {
   Eigen::MatrixXd A = Eigen::MatrixXd(2, 2);
   A << 3 * T * T, 4 * T * T * T,
-      6 * T, 12 * T * T;
+       6 * T, 12 * T * T;
 
   Eigen::MatrixXd B = Eigen::MatrixXd(2, 1);
   B << end[0] - (start[1] + start[2] * T),
-      end[1] - start[2];
+       end[1] - start[2];
 
-  Eigen::MatrixXd Ai = A.inverse();
-  Eigen::MatrixXd C = Ai * B;
+  Eigen::MatrixXd C = A.inverse() * B;
 
   coefficients = {start[0], start[1], .5 * start[2]};
 
@@ -29,7 +28,28 @@ QuarticPolynomial::QuarticPolynomial(const std::vector<double> &start, const std
   {
     coefficients.push_back(C.data()[i]);
   }
-};
+}
+
+QuarticPolynomial::QuarticPolynomial(const FrenetState& start, const FrenetState& end)
+{
+  const double T = end.T;
+  Eigen::MatrixXd A = Eigen::MatrixXd(2, 2);
+  A << 3 * T * T, 4 * T * T * T,
+       6 * T,     12 * T * T;
+
+  Eigen::MatrixXd B = Eigen::MatrixXd(2, 1);
+  B << end.s - (start.s_d + start.s_dd * T),
+       end.s_d - start.s_dd;
+
+  Eigen::MatrixXd C = A.inverse() * B;
+
+  coefficients = {start.s, start.s_d, .5 * start.s_dd};
+
+  for (int i = 0; i < C.size(); i++)
+  {
+    coefficients.push_back(C.data()[i]);
+  }
+}
 
 // calculate the s/d coordinate of a point
 double QuarticPolynomial::calculatePoint(double t)

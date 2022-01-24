@@ -14,18 +14,40 @@ QuinticPolynomial::QuinticPolynomial(const std::vector<double> &start, const std
 {
   Eigen::MatrixXd A = Eigen::MatrixXd(3, 3);
   A << T * T * T, T * T * T * T, T * T * T * T * T,
-      3 * T * T, 4 * T * T * T, 5 * T * T * T * T,
-      6 * T, 12 * T * T, 20 * T * T * T;
+       3 * T * T, 4 * T * T * T, 5 * T * T * T * T,
+       6 * T, 12 * T * T, 20 * T * T * T;
 
   Eigen::MatrixXd B = Eigen::MatrixXd(3, 1);
   B << end[0] - (start[0] + start[1] * T + .5 * start[2] * T * T),
-      end[1] - (start[1] + start[2] * T),
-      end[2] - start[2];
+       end[1] - (start[1] + start[2] * T),
+       end[2] - start[2];
 
-  Eigen::MatrixXd Ai = A.inverse();
-  Eigen::MatrixXd C = Ai * B;
+  Eigen::MatrixXd C = A.inverse() * B;
 
   coefficients = {start[0], start[1], .5 * start[2]};
+
+  for (int i = 0; i < C.size(); i++)
+  {
+    coefficients.push_back(C.data()[i]);
+  }
+}
+
+QuinticPolynomial::QuinticPolynomial(const FrenetState& start, const FrenetState& end)
+{
+  const double T = end.T;
+  Eigen::MatrixXd A = Eigen::MatrixXd(3, 3);
+  A << T * T * T, T * T * T * T, T * T * T * T * T,
+       3 * T * T, 4 * T * T * T, 5 * T * T * T * T,
+       6 * T,     12 * T * T,    20 * T * T * T;
+
+  Eigen::MatrixXd B = Eigen::MatrixXd(3, 1);
+  B << end.d - (start.d + start.d_d * T + .5 * start.d_dd * T * T),
+       end.d_d - (start.d_d + start.d_dd * T),
+       end.d_dd - start.d_dd;
+
+  Eigen::MatrixXd C = A.inverse() * B;
+
+  coefficients = {start.d, start.d_d, .5 * start.d_dd};
 
   for (int i = 0; i < C.size(); i++)
   {

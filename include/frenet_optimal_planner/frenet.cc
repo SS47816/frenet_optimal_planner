@@ -44,21 +44,9 @@ FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
   FrenetState state;
   state.d = distance(x_x, x_y, proj_x, proj_y);
 
-  // get the normal vector d
-  // double d_x = lane.dx[prev_wp_id];
-  // double d_y = lane.dy[prev_wp_id];
-  // double wp_yaw = atan2(d_y, d_x) + M_PI / 2;
   const double wp_yaw = lane.points[prev_wp_id].point.yaw;
   const double delta_yaw = unifyAngleRange(current_state.yaw - wp_yaw);
 
-  // std::cout << "getFrenet() Break 3" << std::endl;
-
-  // find the projection of x on d
-  // double proj_x_d = x_x * d_x + x_y * d_y;
-  // if (proj_x_d >= 0)
-  // {
-  //   state.d *= -1;
-  // }
   if (wp_yaw >= x_yaw)
   {
     state.d *= -1;
@@ -76,6 +64,11 @@ FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
   // calculate s_d and d_d
   state.s_d = current_state.v * cos(delta_yaw);
   state.d_d = current_state.v * sin(delta_yaw);
+
+  state.s_dd = 0.0;
+  state.s_ddd = 0.0;
+  state.d_dd = 0.0;
+  state.d_ddd = 0.0;
 
   return state;
 }

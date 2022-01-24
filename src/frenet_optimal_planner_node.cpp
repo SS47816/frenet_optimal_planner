@@ -75,8 +75,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
   SETTINGS.k_diff = config.k_diff;
-  SETTINGS.k_lateral = config.k_lateral;
-  SETTINGS.k_longitudinal = config.k_longitudinal;
+  SETTINGS.k_lat = config.k_lat;
+  SETTINGS.k_lon = config.k_lon;
   SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();

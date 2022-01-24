@@ -10,6 +10,7 @@
 
 #include <vector>
 #include "Eigen/Dense"
+#include "frenet.h"
 
 namespace fop
 {
@@ -19,6 +20,7 @@ class QuarticPolynomial
  public:
 	// Constructor
 	QuarticPolynomial(const std::vector<double> &start, const std::vector<double> &end, double T);
+	QuarticPolynomial(const FrenetState& start, const FrenetState& end);
 
 	// Destructor
 	virtual ~QuarticPolynomial() {};
