@@ -72,6 +72,8 @@ class FrenetOptimalTrajectoryPlanner
     double k_obstacle;          // obstacle cost weight
 
     // Collision Parameters
+    double safety_margin_lon;   // soft safety margin [m]
+    double safety_margin_lat;   // soft safety margin [m]
     double soft_safety_margin;  // soft safety margin [m]
     double vehicle_width;       // vehicle width [m]
     double vehicle_length;      // vehicle length [m]
@@ -119,7 +121,11 @@ private:
   SATCollisionChecker sat_collision_checker_;
   
   /* Private Functions */
-  std::vector<FrenetState> sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed);
+  std::vector<std::vector<std::vector<FrenetState>>> sampleEndStates(const FrenetState& start_state, const int lane_id, const double left_bound, const double right_bound, const double current_speed);
+  
+  // Find the best init guess based on end states
+  std::pair<std::vector<int>, double> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
+
   // Sample candidate trajectories
   FrenetPath generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state);
 
@@ -130,12 +136,12 @@ private:
   void computeTrajCost(FrenetPath& traj);
 
   // Check for vehicle kinematic constraints
-  void checkConstraints(FrenetPath& traj);
+  bool checkConstraints(FrenetPath& traj);
 
   // Check for collisions and calculate obstacle cost
-  int checkCollisions(std::vector<FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
-  std::pair<bool, int> checkTrajCollision(const FrenetPath& frenet_traj, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
-  Path predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps);
+  std::vector<Path> predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
+  std::pair<bool, int> checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
+  std::pair<bool, int> checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, const autoware_msgs::DetectedObjectArray& obstacles, const double margin_lon, const double margin_lat);
 
   // Select the best paths for each lane option
   std::vector<FrenetPath> findBestPaths(const std::vector<FrenetPath>& frenet_traj_list);

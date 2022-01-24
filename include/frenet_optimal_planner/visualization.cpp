@@ -337,8 +337,8 @@ public:
     double max_cost = 0.0;
     for (const auto& traj : candidate_trajs)
     {
-      min_cost = std::min(min_cost, traj.cf);
-      max_cost = std::max(max_cost, traj.cf);
+      min_cost = std::min(min_cost, traj.final_cost);
+      max_cost = std::max(max_cost, traj.final_cost);
     }
 
     for (const auto& traj : candidate_trajs)
@@ -353,8 +353,8 @@ public:
       }
       else
       {
-        const double R = 1.0*traj.cf/max_cost;
-        const double G = 0.7*traj.cf/min_cost;
+        const double R = 1.0*traj.final_cost/max_cost;
+        const double G = 0.7*traj.final_cost/min_cost;
         std_msgs::ColorRGBA color = parseColor(R, G, 0.2, 0.8);
         candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "safe", color, z_map, max_speed));
       }

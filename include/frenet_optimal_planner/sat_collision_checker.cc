@@ -169,21 +169,18 @@ bool SATCollisionChecker::check_collision(geometry_msgs::Polygon rect, geometry_
  * @param margin Lateral safety margin 
  * @return Rectangle representing the position of the vehicle in the map frame. Total width of rectangle =  width + (2 * margin) 
  */
-geometry_msgs::Polygon SATCollisionChecker::construct_rectangle(double centre_x, double centre_y, double yaw, double length, double width, double margin)
+geometry_msgs::Polygon SATCollisionChecker::construct_rectangle(const double centre_x, const double centre_y, const double yaw, 
+                                                                const double length, const double width, 
+                                                                const double margin_lon, const double margin_lat)
 {
-  geometry_msgs::Point32 p1;
-  geometry_msgs::Point32 p2;
-  geometry_msgs::Point32 p3;
-  geometry_msgs::Point32 p4;
+  geometry_msgs::Point32 p1, p2, p3, p4;
 
   // x axis is longitudinal, y axis is lateral
-
   // construct at center of map initially
-  double bottom_x = -length / 2;
-  double top_x = length / 2;
-  double left_y = -width / 2 - margin;
-  double right_y = width / 2 + margin;
-
+  double bottom_x = -length*(0.5 + margin_lon);
+  double top_x = length*(0.5 + margin_lon);
+  double left_y = -width*(0.5 + margin_lat);
+  double right_y = width*(0.5 + margin_lat);
   p1.x = bottom_x;
   p1.y = left_y;
 

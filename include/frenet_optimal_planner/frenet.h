@@ -30,6 +30,7 @@ class FrenetState
   virtual ~FrenetState(){};
 
   int lane_id;
+  double T;
   double s;
   double s_d;
   double s_dd;
@@ -38,8 +39,12 @@ class FrenetState
   double d_d;
   double d_dd;
   double d_ddd;
-  double T;
+
   double fix_cost;
+  double est_cost;
+  double final_cost;
+
+  bool is_used;
 };
 
 class FrenetPath

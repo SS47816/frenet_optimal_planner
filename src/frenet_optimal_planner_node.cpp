@@ -233,7 +233,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   std::vector<fop::FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC);
-
+  ROS_INFO("Local Planner: Frenet Optimal Planning Done");
   // Find the best path from the all candidates 
   fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best trajs Selected");
