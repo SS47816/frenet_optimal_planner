@@ -23,7 +23,7 @@ namespace fop
   double Vehicle::max_speed() { return kph2mps(100); };
   double Vehicle::max_acceleration() { return max_speed()/10.0; };
   double Vehicle::max_deceleration() { return -max_speed()/5.0; };
-  double Vehicle::max_steering_angle() { return deg2rad(35); };
+  double Vehicle::max_steering_angle() { return deg2rad(45); };
   double Vehicle::max_steering_rate() { return max_steering_angle()/3.0; }; 
   double Vehicle::max_curvature_front() { return std::sin(max_steering_angle())/L(); };
   double Vehicle::max_curvature_rear() { return std::tan(max_steering_angle())/L(); };

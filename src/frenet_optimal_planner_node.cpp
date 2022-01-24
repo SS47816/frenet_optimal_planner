@@ -66,11 +66,15 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.lowest_speed = fop::kph2mps(config.lowest_speed);
   SETTINGS.num_speed = config.num_speed;
   // Constraints
-  SETTINGS.max_speed = fop::Vehicle::max_speed();
-  SETTINGS.max_accel = fop::Vehicle::max_acceleration();
-  SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
+  // SETTINGS.max_speed = fop::Vehicle::max_speed();
+  // SETTINGS.max_accel = fop::Vehicle::max_acceleration();
+  // SETTINGS.max_decel = fop::Vehicle::max_deceleration();
+  // SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
   // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
+  SETTINGS.max_speed = config.max_speed;
+  SETTINGS.max_accel = config.max_acceleration;
+  SETTINGS.max_decel = -config.max_deceleration;
+  SETTINGS.max_curvature = config.max_curvature;
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
@@ -79,9 +83,11 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_lon = config.k_lon;
   SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
+  SETTINGS.safety_margin_lon = config.safety_margin_lon;
+  SETTINGS.safety_margin_lat = config.safety_margin_lat;
+  SETTINGS.safety_margin_soft = config.safety_margin_soft;
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
   SETTINGS.vehicle_length = fop::Vehicle::bbox_size().x();
-  SETTINGS.soft_safety_margin = config.soft_safety_margin;
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;

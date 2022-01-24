@@ -72,9 +72,9 @@ class FrenetOptimalTrajectoryPlanner
     double k_obstacle;          // obstacle cost weight
 
     // Collision Parameters
-    double safety_margin_lon;   // soft safety margin [m]
-    double safety_margin_lat;   // soft safety margin [m]
-    double soft_safety_margin;  // soft safety margin [m]
+    double safety_margin_lon;   // lon safety margin [ratio]
+    double safety_margin_lat;   // lat safety margin [ratio]
+    double safety_margin_soft;  // soft safety margin [ratio]
     double vehicle_width;       // vehicle width [m]
     double vehicle_length;      // vehicle length [m]
   };

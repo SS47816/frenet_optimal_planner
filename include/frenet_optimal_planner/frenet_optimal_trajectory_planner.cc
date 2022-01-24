@@ -137,7 +137,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   const int num_states = end_states.size()*end_states[0].size()*end_states[0][0].size();
   int num_trajs = 0;
   int num_collision_checks = 0;
-  std::cout << "FOP: Sampled " << num_states << " End States" << num_trajs << std::endl;
 
   this->candidate_trajs_ = std::make_shared<std::vector<FrenetPath>>();
   // double min_cost = 10000.0;
@@ -147,7 +146,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   while (!best_traj_found && unchecked_states_remaining)
   {
     num_trajs++;
-    std::cout << "FOP: Search iteration: " << num_trajs << std::endl;
 
     const auto init_guess = findNextBest(end_states);
     unchecked_states_remaining = init_guess.second; // false for no more unchecked end states
@@ -161,7 +159,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     computeTrajCost(candidate_traj);
     // Check for constraints
     bool is_safe = checkConstraints(candidate_traj);
-    std::cout << "FOP: Constraints Checked, is_safe: " << is_safe << std::endl;
     if (!is_safe)
     {
       this->candidate_trajs_->push_back(candidate_traj);
@@ -172,7 +169,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       // Check for collisions
       if (check_collision)
       {
-        const auto result = checkCollisions(candidate_traj, obstacle_trajs, obstacles, false);
+        const auto result = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async);
         is_safe = result.first;
         num_collision_checks += result.second;
       }
@@ -182,7 +179,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       }
       candidate_trajs_->push_back(candidate_traj);
     }
-    std::cout << "FOP: Collision Checked, is_safe: " << is_safe << std::endl;
     
     if (is_safe)
     {
@@ -214,7 +210,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   }
 
   /* --------------------------------- Construction Zone -------------------------------- */
-
 
   // generateFrenetPaths(start_state, end_state);
   // candidate_trajs_ = std::make_shared<std::vector<FrenetPath>>();
@@ -306,6 +301,7 @@ std::vector<std::vector<std::vector<FrenetState>>> FrenetOptimalTrajectoryPlanne
                            + settings_.k_lon * (settings_.k_time*time_cost + settings_.k_diff*speed_cost);
         // estimated huristic cost terms
         end_state.est_cost = settings_.k_lat * settings_.k_diff*pow(start_state.d - end_state.d, 2);
+        end_state.final_cost = end_state.fix_cost + end_state.est_cost;
 
         end_states_1d.emplace_back(end_state);
       }
@@ -457,19 +453,19 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
     {
       passed = false;
-      std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
       break;
     }
     else if (traj.s_d[i] > settings_.max_speed)
     {
       passed = false;
-      std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
     else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
     else if (std::abs(traj.c[i]) > settings_.max_curvature)
@@ -530,14 +526,12 @@ std::pair<bool, int> FrenetOptimalTrajectoryPlanner::checkCollisions(FrenetPath&
     const auto result = collision_check.get();
     ego_traj.collision_passed = result.first;
     num_checks += result.second;
-    std::cout << "Async Collision Checking" << std::endl;
   }
   else
   {
     const auto result = checkTrajCollision(ego_traj, obstacle_trajs, obstacles, settings_.safety_margin_lon, settings_.safety_margin_lat);
     ego_traj.collision_passed = result.first;
     num_checks += result.second;
-    std::cout << "Sync Collision Checking" << std::endl;
   }
 
   return std::pair<bool, int>{ego_traj.collision_passed, num_checks};
