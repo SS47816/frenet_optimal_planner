@@ -46,13 +46,38 @@ bool SETTINGS_UPDATED = false;
 // Dynamic parameter server callback function
 void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
 {
-  // Hyperparameters for output path
-  TRAJ_MAX_SIZE = config.traj_max_size;
-  TRAJ_MIN_SIZE = config.traj_min_size;
-
+  // General Settings
   CHECK_COLLISION = config.check_collision;
   USE_ASYNC = config.use_async;
+  SETTINGS.tick_t = config.tick_t;
 
+  // Sampling parameters (lateral)
+  LANE_WIDTH = config.curr_lane_width;
+  LEFT_LANE_WIDTH = config.left_lane_width;
+  RIGHT_LANE_WIDTH = config.right_lane_width;
+  SETTINGS.center_offset = config.center_offset;
+  SETTINGS.num_width = config.num_width;
+  // Sampling parameters (longitudinal)
+  SETTINGS.max_t = config.max_t;
+  SETTINGS.min_t = config.min_t;
+  SETTINGS.num_t = config.num_t;
+  
+  SETTINGS.highest_speed = fop::kph2mps(config.highest_speed);
+  SETTINGS.lowest_speed = fop::kph2mps(config.lowest_speed);
+  SETTINGS.num_speed = config.num_speed;
+  // Constraints
+  SETTINGS.max_speed = fop::Vehicle::max_speed();
+  SETTINGS.max_accel = fop::Vehicle::max_acceleration();
+  SETTINGS.max_decel = fop::Vehicle::max_deceleration();
+  SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
+  // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
+  // Cost Weights
+  SETTINGS.k_jerk = config.k_jerk;
+  SETTINGS.k_diff = config.k_time;
+  SETTINGS.k_diff = config.k_diff;
+  SETTINGS.k_lateral = config.k_lateral;
+  SETTINGS.k_longitudinal = config.k_longitudinal;
+  SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
   SETTINGS.vehicle_length = fop::Vehicle::bbox_size().x();
@@ -64,33 +89,9 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   NUM_WP_LOOK_AHEAD = config.num_wp_look_ahead;
   STANLEY_OVERALL_GAIN = config.stanley_overall_gain;
   TRACK_ERROR_GAIN = config.track_error_gain;
-  // Sampling parameters (lateral)
-  LANE_WIDTH = config.curr_lane_width;
-  LEFT_LANE_WIDTH = config.left_lane_width;
-  RIGHT_LANE_WIDTH = config.right_lane_width;
-  SETTINGS.centre_offset = config.center_offset;
-  SETTINGS.delta_width = config.delta_width;
-  // Sampling parameters (longitudinal)
-  SETTINGS.max_t = config.max_t;
-  SETTINGS.min_t = config.min_t;
-  SETTINGS.delta_t = config.delta_t;
-  SETTINGS.tick_t = config.tick_t;
-  SETTINGS.target_speed = fop::kph2mps(config.target_speed);
-  SETTINGS.delta_speed = fop::kph2mps(config.delta_speed);
-  SETTINGS.num_speed_sample = config.num_speed_sample;
-  // Constraints
-  SETTINGS.max_speed = fop::Vehicle::max_speed();
-  SETTINGS.max_accel = fop::Vehicle::max_acceleration();
-  SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
-  SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
-  // Cost Weights
-  SETTINGS.k_jerk = config.k_jerk;
-  SETTINGS.k_diff = config.k_time;
-  SETTINGS.k_diff = config.k_diff;
-  SETTINGS.k_lateral = config.k_lateral;
-  SETTINGS.k_longitudinal = config.k_longitudinal;
-  SETTINGS.k_obstacle = config.k_obstacle;
+  // Hyperparameters for output path
+  TRAJ_MAX_SIZE = config.traj_max_size;
+  TRAJ_MIN_SIZE = config.traj_min_size;
 
   SETTINGS_UPDATED = true;
 }
@@ -443,7 +444,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   }
 
   // Check if the global waypoints need to be filtered
-  const double ref_spline_length = SETTINGS.target_speed*(2*SETTINGS.max_t);
+  const double ref_spline_length = SETTINGS.highest_speed*(SETTINGS.max_t + SETTINGS.min_t);
   if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= ref_spline_length)
   {
     // Filter the waypoints to a uniform density
