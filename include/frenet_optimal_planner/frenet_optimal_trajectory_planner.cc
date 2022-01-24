@@ -137,16 +137,21 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   const int num_states = end_states.size()*end_states[0].size()*end_states[0][0].size();
   int num_trajs = 0;
   int num_collision_checks = 0;
+  std::cout << "FOP: Sampled " << num_states << " End States" << num_trajs << std::endl;
 
   this->candidate_trajs_ = std::make_shared<std::vector<FrenetPath>>();
   // double min_cost = 10000.0;
   
   bool best_traj_found = false;
-  while (!best_traj_found)
+  bool unchecked_states_remaining = true;
+  while (!best_traj_found && unchecked_states_remaining)
   {
     num_trajs++;
+    std::cout << "FOP: Search iteration: " << num_trajs << std::endl;
 
     const auto init_guess = findNextBest(end_states);
+    unchecked_states_remaining = init_guess.second; // false for no more unchecked end states
+
     const auto idx = init_guess.first;
     // Generate the Trajectory accordingly
     FrenetPath candidate_traj = generateFrenetPath(start_state, end_states[idx[0]][idx[1]][idx[2]]);
@@ -156,6 +161,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     computeTrajCost(candidate_traj);
     // Check for constraints
     bool is_safe = checkConstraints(candidate_traj);
+    std::cout << "FOP: Constraints Checked, is_safe: " << is_safe << std::endl;
     if (!is_safe)
     {
       this->candidate_trajs_->push_back(candidate_traj);
@@ -166,7 +172,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       // Check for collisions
       if (check_collision)
       {
-        const auto result = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async);
+        const auto result = checkCollisions(candidate_traj, obstacle_trajs, obstacles, false);
         is_safe = result.first;
         num_collision_checks += result.second;
       }
@@ -176,10 +182,12 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       }
       candidate_trajs_->push_back(candidate_traj);
     }
+    std::cout << "FOP: Collision Checked, is_safe: " << is_safe << std::endl;
     
     if (is_safe)
     {
       best_traj_found = true;
+      std::cout << "FOP: Best Traj Found" << std::endl;
     }
   }
 
@@ -283,7 +291,7 @@ std::vector<std::vector<std::vector<FrenetState>>> FrenetOptimalTrajectoryPlanne
         // end time
         end_state.T = settings_.min_t + k*delta_t;
         // end longitudial state [s, s_d, s_dd]
-        end_state.s = -1.0;                 // TBD later by polynomial
+        end_state.s = 0.0;  // TBD later by polynomial
         end_state.s_d = v;
         end_state.s_dd = 0.0;
         // end lateral state [d, d_d, d_dd]
@@ -311,30 +319,35 @@ std::vector<std::vector<std::vector<FrenetState>>> FrenetOptimalTrajectoryPlanne
   return std::move(end_states_3d);
 }
 
-std::pair<std::vector<int>, double> FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states)
+std::pair<std::vector<int>, bool> FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states)
 {
   double min_cost = 10000.0;
   std::vector<int> indices = std::vector<int>{3, int(0)};
-
+  bool found = false;
   for (int i = 0; i < end_states.size(); i++)
   {
     for (int j = 0; j < end_states[0].size(); j++)
     {
       for (int k = 0; k < end_states[0][0].size(); k++)
       {
-        if (!end_states[i][j][k].is_used && end_states[i][j][k].fix_cost < min_cost)
+        if (end_states[i][j][k].is_used)
+        {  
+          continue;
+        }
+        else if (end_states[i][j][k].final_cost < min_cost)
         {
+          found = true;
           indices[0] = i;
           indices[1] = j;
           indices[2] = k;
-          min_cost = end_states[i][j][k].fix_cost;
+          min_cost = end_states[i][j][k].final_cost;
         }
       }
     }
   }
   // mark this end state as used
   end_states[indices[0]][indices[1]][indices[2]].is_used = true;
-  return std::pair<std::vector<int>, double>{indices, min_cost};
+  return std::pair<std::vector<int>, bool>{indices, found};
 }
 
 FrenetPath FrenetOptimalTrajectoryPlanner::generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state)
@@ -439,31 +452,31 @@ void FrenetOptimalTrajectoryPlanner::computeTrajCost(FrenetPath& traj)
 bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
 {
   bool passed = true;
-  for (int j = 0; j < traj.c.size(); j++)
+  for (int i = 0; i < traj.c.size(); i++)
   {
-    if (!isLegal(traj.x[j]) || !isLegal(traj.y[j]))
+    if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
     {
       passed = false;
-      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      std::cout << "Condition 0: Contains ilegal values" << std::endl;
       break;
     }
-    else if (traj.s_d[j] > settings_.max_speed)
+    else if (traj.s_d[i] > settings_.max_speed)
     {
       passed = false;
-      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
-    else if (traj.s_dd[j] > settings_.max_accel || traj.s_dd[j] < settings_.max_decel)
+    else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
-    else if (std::abs(traj.c[j]) > settings_.max_curvature)
+    else if (std::abs(traj.c[i]) > settings_.max_curvature)
     {
       passed = false;
-      // std::cout << "Exceeded max curvature = " << settings_.max_curvature
-      //           << ". Curr curvature = " << (traj.c[j]) << std::endl;
+      std::cout << "Exceeded max curvature = " << settings_.max_curvature
+                << ". Curr curvature = " << (traj.c[i]) << std::endl;
       break;
     }
   }

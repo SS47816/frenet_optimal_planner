@@ -124,7 +124,7 @@ private:
   std::vector<std::vector<std::vector<FrenetState>>> sampleEndStates(const FrenetState& start_state, const int lane_id, const double left_bound, const double right_bound, const double current_speed);
   
   // Find the best init guess based on end states
-  std::pair<std::vector<int>, double> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
+  std::pair<std::vector<int>, bool> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
 
   // Sample candidate trajectories
   FrenetPath generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state);

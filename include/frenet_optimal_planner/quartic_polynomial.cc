@@ -38,8 +38,8 @@ QuarticPolynomial::QuarticPolynomial(const FrenetState& start, const FrenetState
        6 * T,     12 * T * T;
 
   Eigen::MatrixXd B = Eigen::MatrixXd(2, 1);
-  B << end.s - (start.s_d + start.s_dd * T),
-       end.s_d - start.s_dd;
+  B << end.s_d - (start.s_d + start.s_dd * T),
+       end.s_dd - start.s_dd;
 
   Eigen::MatrixXd C = A.inverse() * B;
 
