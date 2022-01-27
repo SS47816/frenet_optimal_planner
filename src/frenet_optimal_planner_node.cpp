@@ -831,7 +831,7 @@ void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const doubl
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "frenet_optimal_planner_node");
-  FrenetOptimalPlannerNode frenet_optimal_planner_node;
+  fop::FrenetOptimalPlannerNode frenet_optimal_planner_node;
   ros::spin();  // spin the ros node.
   return 0;
 }

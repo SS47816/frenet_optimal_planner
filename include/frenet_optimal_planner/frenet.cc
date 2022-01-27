@@ -11,6 +11,45 @@
 namespace fop
 {
 
+FrenetPath::FrenetPath() {}
+FrenetPath::FrenetPath(const FrenetState& end_state) : is_generated(false)
+{
+  this->lane_id = end_state.lane_id;
+  // Pass the pre-computed costs to trajectory
+  this->fix_cost = end_state.fix_cost;
+  this->est_cost = end_state.est_cost;
+  this->dyn_cost = 0.0;
+  this->final_cost = end_state.final_cost;
+}
+
+void FrenetPath::generateTrajectory(const FrenetState& start_state, const FrenetState& end_state, const double tick_t)
+{
+  // generate lateral quintic polynomial
+  QuinticPolynomial lateral_quintic_poly = QuinticPolynomial(start_state, end_state);
+
+  // store the this lateral trajectory into frenet_traj
+  for (double t = 0.0; t <= end_state.T; t += tick_t)
+  {
+    this->t.emplace_back(t);
+    this->d.emplace_back(lateral_quintic_poly.calculatePoint(t));
+    this->d_d.emplace_back(lateral_quintic_poly.calculateFirstDerivative(t));
+    this->d_dd.emplace_back(lateral_quintic_poly.calculateSecondDerivative(t));
+    this->d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
+  }
+
+  // generate longitudinal quartic polynomial
+  QuarticPolynomial longitudinal_quartic_poly = QuarticPolynomial(start_state, end_state);
+
+  // store the this longitudinal trajectory into frenet_traj
+  for (double t = 0.0; t <= end_state.T; t += tick_t)
+  {
+    this->s.emplace_back(longitudinal_quartic_poly.calculatePoint(t));
+    this->s_d.emplace_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
+    this->s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
+    this->s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
+  }
+}
+
 FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
 {
   // std::cout << "getFrenet() Break 0" << std::endl;

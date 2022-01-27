@@ -16,7 +16,8 @@
 #include "lane.h"
 #include "math_utils.h"
 #include "vehicle_state.h"
-
+#include "quintic_polynomial.h"
+#include "quartic_polynomial.h"
 
 namespace fop
 {
@@ -25,11 +26,17 @@ class FrenetState
 {
  public:
   // Constructor
-  FrenetState(){};
+  FrenetState() {};
   // Destructor
   virtual ~FrenetState(){};
 
   int lane_id;
+  bool is_used;
+
+  double fix_cost;
+  double est_cost;
+  double final_cost;
+
   double T;
   double s;
   double s_d;
@@ -39,23 +46,20 @@ class FrenetState
   double d_d;
   double d_dd;
   double d_ddd;
-
-  double fix_cost;
-  double est_cost;
-  double final_cost;
-
-  bool is_used;
 };
 
 class FrenetPath
 {
  public:
   // Constructor
-  FrenetPath() {};
-  // Destructor
-  virtual ~FrenetPath() {};
+  FrenetPath();
+  FrenetPath(const FrenetState& end_state);
 
+  void generateTrajectory(const FrenetState& start_state, const FrenetState& end_state, const double tick_t);
+
+  // flags
   int lane_id;
+  bool is_generated;
   // checks
   bool constraint_passed;
   bool collision_passed;
