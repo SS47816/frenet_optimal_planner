@@ -16,8 +16,6 @@
 
 #include "frenet.h"
 #include "math_utils.h"
-#include "quintic_polynomial.h"
-#include "quartic_polynomial.h"
 #include "spline.h"
 #include "vehicle_state.h"
 #include "vehicle.h"
@@ -123,11 +121,13 @@ private:
   /* Private Functions */
   std::vector<std::vector<std::vector<FrenetState>>> sampleEndStates(const FrenetState& start_state, const int lane_id, const double left_bound, const double right_bound, const double current_speed);
   
+  // Initialize matrix of candidate trajectories
+  std::vector<std::vector<std::vector<FrenetPath>>> initTrajectories(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
+
   // Find the best init guess based on end states
   std::pair<std::vector<int>, bool> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
 
-  // Sample candidate trajectories
-  FrenetPath generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state);
+  std::vector<double> findGradients();
 
   // Convert paths from frenet frame to gobal map frame
   void convertToGlobalFrame(FrenetPath& frenet_traj, Spline2D& cubic_spline);

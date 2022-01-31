@@ -120,17 +120,15 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
                                                       const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async)
 {
   // Initialize a series of results to be recorded
-  // std::vector<size_t> numbers;
-  // std::vector<std::chrono::_V2::system_clock::time_point> timestamps;
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  /* --------------------------------- Construction Zone -------------------------------- */
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto obstacle_trajs = predictTrajectories(obstacles);
   const std::chrono::duration<double, std::milli> prediction_time = std::chrono::high_resolution_clock::now() - start_time;
   
+  /* --------------------------------- Construction Zone -------------------------------- */
+  
   // Sample all the end states in 3 dimensions, [d, v, t]
-  std::vector<std::vector<std::vector<FrenetState>>> end_states = sampleEndStates(start_state, lane_id, left_width, right_width, current_speed);
+  auto end_states = sampleEndStates(start_state, lane_id, left_width, right_width, current_speed);
+  auto trajs = initTrajectories(end_states);
   const std::chrono::duration<double, std::milli> sampling_time = std::chrono::high_resolution_clock::now() - start_time - prediction_time;
 
   // Record test results
@@ -152,7 +150,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
 
     const auto idx = init_guess.first;
     // Generate the Trajectory accordingly
-    FrenetPath candidate_traj = generateFrenetPath(start_state, end_states[idx[0]][idx[1]][idx[2]]);
+    // FrenetPath candidate_traj = generateFrenetPath(start_state, end_states[idx[0]][idx[1]][idx[2]]);
     // Convert to the global frame
     convertToGlobalFrame(candidate_traj, cubic_spline);
     // Compute real costs
@@ -187,6 +185,8 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     }
   }
 
+  /* --------------------------------- Construction Zone -------------------------------- */
+
   const std::chrono::duration<double, std::milli> total_time = std::chrono::high_resolution_clock::now() - start_time;
 
   // Print Summary for this iteration
@@ -208,50 +208,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   {
     return std::vector<FrenetPath>{};
   }
-
-  /* --------------------------------- Construction Zone -------------------------------- */
-
-  // generateFrenetPaths(start_state, end_state);
-  // candidate_trajs_ = std::make_shared<std::vector<FrenetPath>>();
-  // numbers.push_back(candidate_trajs_->size());
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // Convert to global paths
-  // const int num_conversion_checks = calculateGlobalPaths(*candidate_trajs_, cubic_spline);
-  // numbers.push_back(num_conversion_checks);
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // Check the constraints
-  // const int num_constraint_checks = checkConstraints(*candidate_trajs_);
-  // numbers.push_back(num_constraint_checks);
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // Compute costs
-  // const int num_cost_checks = computeCosts(*candidate_trajs_, current_speed);
-  // numbers.push_back(num_cost_checks);
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // Check collisions
-  // int num_collision_checks = 0;
-  // if (check_collision)
-  // {
-  //   num_collision_checks = checkCollisions(*candidate_trajs_, obstacles, use_async);
-  // }
-  // else
-  // {
-  //   std::cout << "Collision Checking Skipped" << std::endl;
-  // }
-  // numbers.push_back(num_collision_checks);
-  // const auto start_time = std::chrono::high_resolution_clock::now();
-  // timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // Find the path with minimum costs
-  // std::vector<FrenetPath> best_path_list = findBestPaths(*candidate_trajs_);
-
-  // test_result_.updateCount(std::move(numbers), std::move(timestamps));
-  // test_result_.printSummary();
-
-  // return best_path_list;
 }
 
 std::vector<std::vector<std::vector<FrenetState>>> FrenetOptimalTrajectoryPlanner::sampleEndStates(const FrenetState& start_state, const int lane_id, const double left_bound, const double right_bound, const double current_speed)
@@ -315,6 +271,29 @@ std::vector<std::vector<std::vector<FrenetState>>> FrenetOptimalTrajectoryPlanne
   return std::move(end_states_3d);
 }
 
+std::vector<std::vector<std::vector<FrenetPath>>> initTrajectories(const std::vector<std::vector<std::vector<FrenetState>>>& end_states)
+{
+  std::vector<std::vector<std::vector<FrenetPath>>> trajs_3d;
+  for (int i = 0; i < end_states.size(); i++)
+  {
+    std::vector<std::vector<FrenetPath>> trajs_2d;
+    for (int j = 0; j < end_states[0].size(); j++)
+    {
+      std::vector<FrenetPath> trajs_1d;
+      for (int k = 0; k < end_states[0][0].size(); k++)
+      {
+        trajs_1d.emplace_back(FrenetPath(end_states[i][j][k]));
+      }
+      
+      trajs_2d.emplace_back(trajs_1d);
+    }
+
+    trajs_3d.emplace_back(trajs_2d);
+  }
+
+  return std::move(trajs_3d);
+}
+
 std::pair<std::vector<int>, bool> FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states)
 {
   double min_cost = 10000.0;
@@ -346,42 +325,9 @@ std::pair<std::vector<int>, bool> FrenetOptimalTrajectoryPlanner::findNextBest(s
   return std::pair<std::vector<int>, bool>{indices, found};
 }
 
-FrenetPath FrenetOptimalTrajectoryPlanner::generateFrenetPath(const FrenetState& start_state, const FrenetState& end_state)
+std::vector<double> findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, std::vector<int>& indices)
 {
-  // frenet path to be generated
-  FrenetPath frenet_traj = FrenetPath();
-  frenet_traj.lane_id = end_state.lane_id;
-
-  // generate lateral quintic polynomial
-  QuinticPolynomial lateral_quintic_poly = QuinticPolynomial(start_state, end_state);
-
-  // store the this lateral trajectory into frenet_traj
-  for (double t = 0.0; t <= end_state.T; t += settings_.tick_t)
-  {
-    frenet_traj.t.emplace_back(t);
-    frenet_traj.d.emplace_back(lateral_quintic_poly.calculatePoint(t));
-    frenet_traj.d_d.emplace_back(lateral_quintic_poly.calculateFirstDerivative(t));
-    frenet_traj.d_dd.emplace_back(lateral_quintic_poly.calculateSecondDerivative(t));
-    frenet_traj.d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
-  }
-
-  // generate longitudinal quartic polynomial
-  QuarticPolynomial longitudinal_quartic_poly = QuarticPolynomial(start_state, end_state);
-
-  // store the this longitudinal trajectory into frenet_traj
-  for (double t = 0.0; t <= end_state.T; t += settings_.tick_t)
-  {
-    frenet_traj.s.emplace_back(longitudinal_quartic_poly.calculatePoint(t));
-    frenet_traj.s_d.emplace_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
-    frenet_traj.s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
-    frenet_traj.s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
-  }
-
-  // Pass the pre-computed costs to trajectory
-  frenet_traj.fix_cost = end_state.fix_cost;
-  frenet_traj.est_cost = end_state.est_cost;
   
-  return frenet_traj;
 }
 
 void FrenetOptimalTrajectoryPlanner::convertToGlobalFrame(FrenetPath& frenet_traj, Spline2D& cubic_spline)

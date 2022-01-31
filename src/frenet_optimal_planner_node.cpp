@@ -62,16 +62,16 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.min_t = config.min_t;
   SETTINGS.num_t = config.num_t;
   
-  SETTINGS.highest_speed = fop::kph2mps(config.highest_speed);
-  SETTINGS.lowest_speed = fop::kph2mps(config.lowest_speed);
+  SETTINGS.highest_speed = kph2mps(config.highest_speed);
+  SETTINGS.lowest_speed = kph2mps(config.lowest_speed);
   SETTINGS.num_speed = config.num_speed;
   // Constraints
-  // SETTINGS.max_speed = fop::Vehicle::max_speed();
-  // SETTINGS.max_accel = fop::Vehicle::max_acceleration();
-  // SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  // SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
-  // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
-  SETTINGS.max_speed = config.max_speed;
+  // SETTINGS.max_speed = Vehicle::max_speed();
+  // SETTINGS.max_accel = Vehicle::max_acceleration();
+  // SETTINGS.max_decel = Vehicle::max_deceleration();
+  // SETTINGS.max_curvature = Vehicle::max_curvature_front();
+  // SETTINGS.steering_angle_rate = Vehicle::max_steering_rate();
+  SETTINGS.max_speed = kph2mps(config.max_speed);
   SETTINGS.max_accel = config.max_acceleration;
   SETTINGS.max_decel = -config.max_deceleration;
   SETTINGS.max_curvature = config.max_curvature;
@@ -86,8 +86,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.safety_margin_lon = config.safety_margin_lon;
   SETTINGS.safety_margin_lat = config.safety_margin_lat;
   SETTINGS.safety_margin_soft = config.safety_margin_soft;
-  SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
-  SETTINGS.vehicle_length = fop::Vehicle::bbox_size().x();
+  SETTINGS.vehicle_width = Vehicle::bbox_size().y();
+  SETTINGS.vehicle_length = Vehicle::bbox_size().x();
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;
@@ -146,12 +146,12 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   // Initializing states
   regenerate_flag_ = false;
   target_lane_id_ = LaneID::CURR_LANE;
-  pid_ = control::PID(0.1, fop::Vehicle::max_acceleration(), fop::Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
+  pid_ = control::PID(0.1, Vehicle::max_acceleration(), Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
 void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
 {
-  lane_ = fop::Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
+  lane_ = Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
   ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
 
@@ -236,7 +236,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result 
-  std::vector<fop::FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+  std::vector<FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC);
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
@@ -249,7 +249,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   }
 
   // Find the best path from the all candidates 
-  fop::FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
+  FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best trajs Selected");
 
   // Concatenate the best path into output_path
@@ -316,7 +316,7 @@ void FrenetOptimalPlannerNode::transformObjects(autoware_msgs::DetectedObjectArr
 }
 
 // Publish the reference spline (for Rviz only)
-void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
+void FrenetOptimalPlannerNode::publishRefSpline(const Path& path)
 {
   nav_msgs::Path ref_path_msg;
   ref_path_msg.header.stamp = ros::Time::now();
@@ -337,7 +337,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const fop::Path& path)
 }
 
 // Publish the current path (for Rviz and MPC)
-void FrenetOptimalPlannerNode::publishCurrTraj(const fop::Path& path)
+void FrenetOptimalPlannerNode::publishCurrTraj(const Path& path)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
@@ -349,7 +349,7 @@ void FrenetOptimalPlannerNode::publishCurrTraj(const fop::Path& path)
     pose.header = curr_trajectory_msg.header;
     pose.pose.position.x = path.x[i];
     pose.pose.position.y = path.y[i];
-    pose.pose.position.z = map_height_ + 2.0*path.v[i]/fop::Vehicle::max_speed();
+    pose.pose.position.z = map_height_ + 2.0*path.v[i]/Vehicle::max_speed();
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     curr_trajectory_msg.poses.emplace_back(pose);
   }
@@ -358,7 +358,7 @@ void FrenetOptimalPlannerNode::publishCurrTraj(const fop::Path& path)
 }
 
 // Publish the best next path (for Rviz only)
-void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
+void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
@@ -370,7 +370,7 @@ void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
     pose.header = curr_trajectory_msg.header;
     pose.pose.position.x = next_traj.x[i];
     pose.pose.position.y = next_traj.y[i];
-    pose.pose.position.z = map_height_ + 2.0*std::hypot(next_traj.s_d[i], next_traj.d_d[i])/fop::Vehicle::max_speed();
+    pose.pose.position.z = map_height_ + 2.0*std::hypot(next_traj.s_d[i], next_traj.d_d[i])/Vehicle::max_speed();
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(next_traj.yaw[i]);
     curr_trajectory_msg.poses.emplace_back(pose);
   }
@@ -382,9 +382,9 @@ void FrenetOptimalPlannerNode::publishNextTraj(const fop::FrenetPath& next_traj)
  * @brief publish candidate trajs for visualization in rviz
  * 
  */
-void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<fop::FrenetPath>& candidate_trajs)
+void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs)
 {
-  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, fop::Vehicle::max_speed());
+  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, Vehicle::max_speed());
 
   candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
@@ -393,9 +393,9 @@ void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<fop::Fren
 void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
 {
   // Publish empty trajs
-  publishRefSpline(fop::Path());
-  publishCurrTraj(fop::Path());
-  publishNextTraj(fop::FrenetPath());
+  publishRefSpline(Path());
+  publishCurrTraj(Path());
+  publishNextTraj(FrenetPath());
   publishVehicleCmd(-1.0, 0.0);
 }
 
@@ -403,8 +403,8 @@ void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
 void FrenetOptimalPlannerNode::updateVehicleFrontAxleState()
 {
   // Current XY of robot (map frame)
-  frontaxle_state_.x = current_state_.x + (fop::Vehicle::L() * std::cos(current_state_.yaw));
-  frontaxle_state_.y = current_state_.y + (fop::Vehicle::L() * std::sin(current_state_.yaw));
+  frontaxle_state_.x = current_state_.x + (Vehicle::L() * std::cos(current_state_.yaw));
+  frontaxle_state_.y = current_state_.y + (Vehicle::L() * std::sin(current_state_.yaw));
   frontaxle_state_.yaw = current_state_.yaw;
   frontaxle_state_.v = current_state_.v;
 }
@@ -423,7 +423,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     return false;
   }
 
-  int start_id = fop::lastWaypoint(current_state_, lane_);
+  int start_id = lastWaypoint(current_state_, lane_);
 
   // if reached the end of the lane, stop
   if (start_id >= lane_.points.size() - 2)  // exclude last 2 waypoints for safety, and prevent code crashing
@@ -433,8 +433,8 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
     return false;
   }
 
-  const double dist = fop::distance(lane_.points[start_id].point.x, lane_.points[start_id].point.y, current_state_.x, current_state_.y);
-  const double heading_diff = fop::unifyAngleRange(current_state_.yaw - lane_.points[start_id].point.yaw);
+  const double dist = distance(lane_.points[start_id].point.x, lane_.points[start_id].point.y, current_state_.x, current_state_.y);
+  const double heading_diff = unifyAngleRange(current_state_.yaw - lane_.points[start_id].point.yaw);
 
   if (dist > MAX_DIST_FROM_PATH)
   {
@@ -525,7 +525,7 @@ void FrenetOptimalPlannerNode::updateStartState()
     ROS_INFO("Local Planner: Regenerating The Entire Path...");
     // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_lane_, but
     // at fringe cases, such as start of code, ref spline might not be available
-    start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(current_state_, local_lane_) : fop::getFrenet(current_state_, ref_spline_);
+    start_state_ = ref_spline_.yaw.empty() ? getFrenet(current_state_, local_lane_) : getFrenet(current_state_, ref_spline_);
 
     // Clear the last output path
     curr_trajectory_.clear();
@@ -539,9 +539,9 @@ void FrenetOptimalPlannerNode::updateStartState()
     // End of the previous path speed
     const double curr_trajectory_last_speed = hypot(curr_trajectory_.x.back() - curr_trajectory_.x.end()[-2], curr_trajectory_.y.back() - curr_trajectory_.y.end()[-2]) / SETTINGS.tick_t;
     // End of the previous path state
-    fop::VehicleState last_state = fop::VehicleState(curr_trajectory_.x.back(), curr_trajectory_.y.back(), curr_trajectory_.yaw.back(), curr_trajectory_.v.back());
+    VehicleState last_state = VehicleState(curr_trajectory_.x.back(), curr_trajectory_.y.back(), curr_trajectory_.yaw.back(), curr_trajectory_.v.back());
 
-    start_state_ = ref_spline_.yaw.empty() ? fop::getFrenet(last_state, local_lane_) : fop::getFrenet(last_state, ref_spline_);
+    start_state_ = ref_spline_.yaw.empty() ? getFrenet(last_state, local_lane_) : getFrenet(last_state, ref_spline_);
   }
 
   // Ensure the speed is above the minimum planning speed
@@ -607,9 +607,9 @@ std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(con
 }
 
 // Select the ideal lane to proceed
-fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::FrenetPath>& best_traj_list, const int current_lane)
+FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<FrenetPath>& best_traj_list, const int current_lane)
 {
-  fop::FrenetPath best_traj;
+  FrenetPath best_traj;
   bool change_lane_flag;
   int keep_lane_id = -1;
   int change_lane_id = -1;
@@ -674,14 +674,14 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
     ROS_INFO("Local Planner: No Path Available");
     change_lane_flag = false;
     // dummy path
-    best_traj = fop::FrenetPath();
+    best_traj = FrenetPath();
   }
 
   return best_traj;
 }
 
 // Concatenate the best next path to the current path
-void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
+void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
 {
   size_t diff = 0;
   if (curr_trajectory_.x.size() <= traj_min_size)
@@ -699,11 +699,11 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
     // Check if the separation between adjacent waypoint are permitted
     if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
     {
-      wp_seperation = fop::distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
+      wp_seperation = distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
     }
     else
     {
-      wp_seperation = fop::distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
+      wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
     }
 
     // If the separation is too big/small, reject point onward
@@ -727,7 +727,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
   {
     // Calculate steering angle
     updateVehicleFrontAxleState();
-    const int next_frontlink_wp_id = fop::nextWaypoint(frontaxle_state_, curr_trajectory_);
+    const int next_frontlink_wp_id = nextWaypoint(frontaxle_state_, curr_trajectory_);
     // Calculate Control Outputs
     if (calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
     {
@@ -740,7 +740,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
       publishVehicleCmd(-1.0, 0.0); // Publish empty control output
     }
 
-    const int next_wp_id = fop::nextWaypoint(current_state_, curr_trajectory_);
+    const int next_wp_id = nextWaypoint(current_state_, curr_trajectory_);
 
     for (size_t i = 0; i < next_wp_id; i++)
     {
@@ -756,7 +756,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
 }
 
 // Steering Help Function
-bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state)
+bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const VehicleState& frontaxle_state)
 {
   const double wp_id = next_wp_id + NUM_WP_LOOK_AHEAD;
 
@@ -771,10 +771,10 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
   else
   {
     // First Term
-    const double delta_yaw = fop::unifyAngleRange(curr_trajectory_.yaw[wp_id] - current_state_.yaw);
+    const double delta_yaw = unifyAngleRange(curr_trajectory_.yaw[wp_id] - current_state_.yaw);
 
     // Second Term
-    const double c = fop::distance(curr_trajectory_.x[wp_id], curr_trajectory_.y[wp_id], curr_trajectory_.x[wp_id+1], curr_trajectory_.y[wp_id+1]);
+    const double c = distance(curr_trajectory_.x[wp_id], curr_trajectory_.y[wp_id], curr_trajectory_.x[wp_id+1], curr_trajectory_.y[wp_id+1]);
     // if two waypoints overlapped, return error value
     if (c <= WP_MIN_SEP)
     {
@@ -782,8 +782,8 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
       regenerate_flag_ = true;
       return false;
     }
-    const double a = fop::distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id], curr_trajectory_.y[wp_id]);
-    const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id+1], curr_trajectory_.y[wp_id+1]);
+    const double a = distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id], curr_trajectory_.y[wp_id]);
+    const double b = distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id+1], curr_trajectory_.y[wp_id+1]);
     // if the vehicle is too far from the waypoint, return error value
     if (a >= MAX_DIST_FROM_PATH || b >= MAX_DIST_FROM_PATH)
     {
@@ -799,19 +799,19 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
 
     // Angle of vector vehicle -> waypoint
     const double vectors_angle_diff = atan2(frontaxle_state.y - curr_trajectory_.y[wp_id], frontaxle_state.x - curr_trajectory_.x[wp_id]) - curr_trajectory_.yaw[wp_id];
-    const double vectors_angle_diff_unified = fop::unifyAngleRange(vectors_angle_diff);
+    const double vectors_angle_diff_unified = unifyAngleRange(vectors_angle_diff);
     const int direction = vectors_angle_diff_unified < 0 ? 1 : -1;
 
     // Final Angle
     steering_angle_ = STANLEY_OVERALL_GAIN * (delta_yaw + direction * atan(TRACK_ERROR_GAIN * x / u));
     // Check if exceeding max steering angle
-    steering_angle_ = fop::limitWithinRange(steering_angle_, -fop::Vehicle::max_steering_angle(), fop::Vehicle::max_steering_angle());
+    steering_angle_ = limitWithinRange(steering_angle_, -Vehicle::max_steering_angle(), Vehicle::max_steering_angle());
 
     // Calculate accelerator output
     acceleration_ = pid_.calculate(curr_trajectory_.v[wp_id], current_state_.v);
 
     ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", curr_trajectory_.v[wp_id], current_state_.v, acceleration_);
-    ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, fop::rad2deg(delta_yaw), fop::rad2deg(steering_angle_));
+    ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, rad2deg(delta_yaw), rad2deg(steering_angle_));
     return true;
   }
 }
@@ -820,7 +820,7 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
 void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
-  vehicle_cmd.twist_cmd.twist.linear.x = accel/fop::Vehicle::max_acceleration();  // [pct]
+  vehicle_cmd.twist_cmd.twist.linear.x = accel/Vehicle::max_acceleration();  // [pct]
   vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
   vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
   vehicle_cmd_pub.publish(vehicle_cmd);
