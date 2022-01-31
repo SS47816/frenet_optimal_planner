@@ -136,7 +136,6 @@ int Spline::searchIndex(double x)
   int index = 0;
   for (int i = 0; i < x_.size(); i++)
   {
-    // if (fop::cmp_doubles_greater_or_equal(x, x_[i]))
     if (x >= x_[i])
     {
       index = i;

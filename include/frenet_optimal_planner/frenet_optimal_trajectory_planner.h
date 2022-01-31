@@ -13,12 +13,15 @@
 #include <vector>
 #include <iostream>
 #include <future>
+#include <queue>
 
 #include "frenet.h"
 #include "math_utils.h"
 #include "spline.h"
 #include "vehicle_state.h"
 #include "vehicle.h"
+#include "quintic_polynomial.h"
+#include "quartic_polynomial.h"
 
 // #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -111,43 +114,44 @@ class FrenetOptimalTrajectoryPlanner
                                                 const double left_width, const double right_width, const double current_speed, 
                                                 const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
   
-  std::shared_ptr<std::vector<FrenetPath>> candidate_trajs_;
+  // std::shared_ptr<std::vector<FrenetPath>> candidate_trajs_;
+  std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
 
-private:
+ private:
   Setting settings_;
+  FrenetState start_state_;
   TestResult test_result_;
   SATCollisionChecker sat_collision_checker_;
   
   /* Private Functions */
-  std::vector<std::vector<std::vector<FrenetState>>> sampleEndStates(const FrenetState& start_state, const int lane_id, const double left_bound, const double right_bound, const double current_speed);
+  std::pair<std::vector<std::vector<std::vector<FrenetPath>>>, Eigen::Vector3i> 
+  sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed);
   
-  // Initialize matrix of candidate trajectories
-  std::vector<std::vector<std::vector<FrenetPath>>> initTrajectories(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
-
   // Find the best init guess based on end states
-  std::pair<std::vector<int>, bool> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
+  // std::pair<std::vector<int>, bool> findNextBest(std::vector<std::vector<std::vector<FrenetState>>>& end_states);
+  bool findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj);
+  Eigen::Vector3d findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj);
+  Eigen::Vector3i findDirection(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx);
+  // bool isValid(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx);
 
-  std::vector<double> findGradients();
+  // Generate this candidate trajectory and compute the real(final) cost
+  double getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx);
 
   // Convert paths from frenet frame to gobal map frame
   void convertToGlobalFrame(FrenetPath& frenet_traj, Spline2D& cubic_spline);
-
-  // Compute costs for candidate trajectories
-  void computeTrajCost(FrenetPath& traj);
-
+  
   // Check for vehicle kinematic constraints
   bool checkConstraints(FrenetPath& traj);
 
   // Check for collisions and calculate obstacle cost
   std::vector<Path> predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
-  std::pair<bool, int> checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
+  bool checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async, int& num_checks);
   std::pair<bool, int> checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, const autoware_msgs::DetectedObjectArray& obstacles, const double margin_lon, const double margin_lat);
 
-  // Select the best paths for each lane option
-  std::vector<FrenetPath> findBestPaths(const std::vector<FrenetPath>& frenet_traj_list);
-
-  // Select the path with the minimum cost
-  FrenetPath findBestPath(const std::vector<FrenetPath>& frenet_traj_list, int target_lane_id);
+  // // Select the best paths for each lane option
+  // std::vector<FrenetPath> findBestPaths(const std::vector<FrenetPath>& frenet_traj_list);
+  // // Select the path with the minimum cost
+  // FrenetPath findBestPath(const std::vector<FrenetPath>& frenet_traj_list, int target_lane_id);
 };
 
 }  // namespace fop

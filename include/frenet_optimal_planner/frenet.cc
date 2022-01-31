@@ -12,41 +12,42 @@ namespace fop
 {
 
 FrenetPath::FrenetPath() {}
-FrenetPath::FrenetPath(const FrenetState& end_state) : is_generated(false)
+FrenetPath::FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double hur_cost)
+ : 
+  lane_id(lane_id), 
+  is_generated(false),
+  is_used(false),
+  constraint_passed(false),
+  collision_passed(false),
+  fix_cost(fix_cost),
+  hur_cost(hur_cost),
+  est_cost(fix_cost + hur_cost),
+  dyn_cost(0.0),
+  final_cost(0.0),
+  end_state(end_state)
+{}
+
+bool operator < (const FrenetPath& lhs, const FrenetPath& rhs)
 {
-  this->lane_id = end_state.lane_id;
-  // Pass the pre-computed costs to trajectory
-  this->fix_cost = end_state.fix_cost;
-  this->est_cost = end_state.est_cost;
-  this->dyn_cost = 0.0;
-  this->final_cost = end_state.final_cost;
+  if (lhs.is_generated && rhs.is_generated)
+  {
+    return lhs.final_cost < rhs.final_cost;
+  }
+  else
+  {
+    return lhs.est_cost < rhs.est_cost;
+  }
 }
 
-void FrenetPath::generateTrajectory(const FrenetState& start_state, const FrenetState& end_state, const double tick_t)
+bool operator > (const FrenetPath& lhs, const FrenetPath& rhs)
 {
-  // generate lateral quintic polynomial
-  QuinticPolynomial lateral_quintic_poly = QuinticPolynomial(start_state, end_state);
-
-  // store the this lateral trajectory into frenet_traj
-  for (double t = 0.0; t <= end_state.T; t += tick_t)
+  if (lhs.is_generated && rhs.is_generated)
   {
-    this->t.emplace_back(t);
-    this->d.emplace_back(lateral_quintic_poly.calculatePoint(t));
-    this->d_d.emplace_back(lateral_quintic_poly.calculateFirstDerivative(t));
-    this->d_dd.emplace_back(lateral_quintic_poly.calculateSecondDerivative(t));
-    this->d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
+    return lhs.final_cost > rhs.final_cost;
   }
-
-  // generate longitudinal quartic polynomial
-  QuarticPolynomial longitudinal_quartic_poly = QuarticPolynomial(start_state, end_state);
-
-  // store the this longitudinal trajectory into frenet_traj
-  for (double t = 0.0; t <= end_state.T; t += tick_t)
+  else
   {
-    this->s.emplace_back(longitudinal_quartic_poly.calculatePoint(t));
-    this->s_d.emplace_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
-    this->s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
-    this->s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
+    return lhs.est_cost > rhs.est_cost;
   }
 }
 

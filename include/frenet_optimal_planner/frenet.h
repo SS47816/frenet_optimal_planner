@@ -16,8 +16,6 @@
 #include "lane.h"
 #include "math_utils.h"
 #include "vehicle_state.h"
-#include "quintic_polynomial.h"
-#include "quartic_polynomial.h"
 
 namespace fop
 {
@@ -28,14 +26,14 @@ class FrenetState
   // Constructor
   FrenetState() {};
   // Destructor
-  virtual ~FrenetState(){};
+  virtual ~FrenetState() {};
 
-  int lane_id;
-  bool is_used;
+  // int lane_id;
+  // bool is_used;
 
-  double fix_cost;
-  double est_cost;
-  double final_cost;
+  // double fix_cost;
+  // double est_cost;
+  // double final_cost;
 
   double T;
   double s;
@@ -53,21 +51,24 @@ class FrenetPath
  public:
   // Constructor
   FrenetPath();
-  FrenetPath(const FrenetState& end_state);
+  FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double hur_cost);
 
-  void generateTrajectory(const FrenetState& start_state, const FrenetState& end_state, const double tick_t);
+  friend bool operator < (const FrenetPath& lhs, const FrenetPath& rhs);
+  friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
 
   // flags
   int lane_id;
-  bool is_generated;
+  bool is_used;       // label if this trajectory has been searched before
+  bool is_generated;  // label if this trajectory has been generated or not
   // checks
   bool constraint_passed;
   bool collision_passed;
   // costs
-  double fix_cost;
-  double est_cost;
-  double dyn_cost;
-  double final_cost;
+  double fix_cost;    // fixed cost term
+  double hur_cost;    // huristic cost term
+  double est_cost;    // cost term estimated before generation (fix_cost + hur_cost)
+  double dyn_cost;    // cost terms to be determined after generation
+  double final_cost;  // final cost for a generated trajectory
   
   // time list
   std::vector<double> t;
@@ -87,6 +88,8 @@ class FrenetPath
   std::vector<double> yaw;
   std::vector<double> ds;
   std::vector<double> c;
+
+  FrenetState end_state;
 };
 
 // Convert the position in Cartesian coordinates to Frenet frame

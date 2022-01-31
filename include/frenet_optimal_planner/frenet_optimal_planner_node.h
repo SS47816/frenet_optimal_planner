@@ -76,17 +76,17 @@ class FrenetOptimalPlannerNode
   double steering_angle_;
 
   // Vehicle's current state
-  fop::VehicleState current_state_;    // State of the vehicle baselink
-  fop::VehicleState frontaxle_state_;  // State of the vehicle frontaxle
+  VehicleState current_state_;    // State of the vehicle baselink
+  VehicleState frontaxle_state_;  // State of the vehicle frontaxle
 
   // Trajectory Sampling States
-  fop::FrenetState start_state_;       // Starting States for sampling
+  FrenetState start_state_;       // Starting States for sampling
   
   // Maps and Trajs
-  fop::Lane lane_;                      // Maps (All the waypoints)
-  fop::Lane local_lane_;                // Selected Waypoints
-  fop::Path ref_spline_;                // Reference Spline
-  fop::Path curr_trajectory_;           // Output Trajectory
+  Lane lane_;                      // Maps (All the waypoints)
+  Lane local_lane_;                // Selected Waypoints
+  Path ref_spline_;                // Reference Spline
+  Path curr_trajectory_;           // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
 
   // Controllers
@@ -120,11 +120,11 @@ class FrenetOptimalPlannerNode
 
   // Functions fo publishing results
   void publishEmptyTrajsAndStop();
-  void publishRefSpline(const fop::Path& path);
-  void publishCurrTraj(const fop::Path& path);
-  void publishNextTraj(const fop::FrenetPath& next_traj);
+  void publishRefSpline(const Path& path);
+  void publishCurrTraj(const Path& path);
+  void publishNextTraj(const FrenetPath& next_traj);
   void publishVehicleCmd(const double accel, const double angle);
-  void publishCandidateTrajs(const std::vector<fop::FrenetPath>& candidate_trajs);
+  void publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs);
 
   // Planner Helper Functions
   bool feedWaypoints();
@@ -133,12 +133,12 @@ class FrenetOptimalPlannerNode
 
   std::vector<double> getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width, const double current_lane_width,
                                                      const double left_lane_width, const double right_lane_width);
-  fop::FrenetPath selectLane(const std::vector<fop::FrenetPath>& best_path_list, const int current_lane);
-  void concatPath(const fop::FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation);
+  FrenetPath selectLane(const std::vector<FrenetPath>& best_path_list, const int current_lane);
+  void concatPath(const FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation);
 
   // Stanley Steeing Functions
   void updateVehicleFrontAxleState();
-  bool calculateControlOutput(const int next_wp_id, const fop::VehicleState& frontaxle_state);
+  bool calculateControlOutput(const int next_wp_id, const VehicleState& frontaxle_state);
 };
 
 } // namespace fop
