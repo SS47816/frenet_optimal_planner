@@ -81,13 +81,13 @@ FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
   this->test_result_ = TestResult();
 }
 
-FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(FrenetOptimalTrajectoryPlanner::Setting& settings)
+FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(const Setting& settings)
 {
   this->settings_ = settings;
   this->test_result_ = TestResult();
 }
 
-void FrenetOptimalTrajectoryPlanner::updateSettings(Setting& settings)
+void FrenetOptimalTrajectoryPlanner::updateSettings(const Setting& settings)
 {
   this->settings_ = settings;
 }
@@ -141,15 +141,19 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   int num_collision_checks = 0;
 
   // ################################ Search Process #####################################
+  std::cout << "FOP: Search Process Starts" << std::endl;
   bool converged = false;
   while (!converged)
   {
     num_iter++;
-
+    std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+    std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
     // Perform a search for the real best trajectory using gradient descent
     converged = findNextBest(trajs_3d, best_idx, num_trajs);
+    std::cout << "FOP: Search iteration " << num_iter << " done!" << std::endl;
   }
 
+  std::cout << "FOP: Search Process Done, Validation Process Starts" << std::endl;
   // ################################ Validation Process #####################################
   FrenetPath best_traj = FrenetPath();
   bool best_traj_found = false;
@@ -187,6 +191,8 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       std::cout << "FOP: Best Traj Found" << std::endl;
     }
   }
+
+  std::cout << "FOP: Validation Process Done" << std::endl;
 
   /* --------------------------------- Construction Zone -------------------------------- */
 
@@ -290,13 +296,16 @@ bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::v
 {
   if (trajs[idx(0)][idx(1)][idx(2)].is_used)
   {
+    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
     return true; // converged
   }
   else
   {
+    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
     trajs[idx(0)][idx(1)][idx(2)].is_used = true; // label this traj as searched
     
     const auto gradients = findGradients(trajs, idx, num_traj);
+    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " Gradients Found" << std::endl;
 
     int grad_dim = 0;
     double max_grad = gradients(0);
@@ -317,11 +326,13 @@ bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::v
 
 Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
 {
-  const Eigen::Vector3i sizes = {trajs.size(), trajs[0].size(), trajs[0][0].size()};
+  const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   const Eigen::Vector3i directions = findDirection(sizes, idx);
-  
+
   // Center sample location which we want to find the gradient
+  std::cout << "FG: At Current idx " << idx(0) << idx(1) << idx(2) << " cost computing" << std::endl;
   const double cost_center = getTrajAndRealCost(trajs, idx);
+  std::cout << "FG: At Current idx " << idx(0) << idx(1) << idx(2) << " cost computed" << std::endl;
 
   // Compute the gradients at each direction
   Eigen::Vector3d gradients;
@@ -329,10 +340,12 @@ Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::v
   {
     Eigen::Vector3i next_idx = idx;
     next_idx(dim) += directions(dim);
-
+    std::cout << "FG: At Next idx " << next_idx(0) << next_idx(1) << next_idx(2) << " cost computing" << std::endl;
     if (directions(dim) >= 0) // the right side has neighbor
     {
+      std::cout << "FG: the right side has neighbor" << std::endl;
       gradients(dim) = getTrajAndRealCost(trajs, next_idx) - cost_center;
+      
       if (gradients(dim) >= 0 && idx(dim) == 0) // the right neighbor has higher cost and there is no neighbor on the left side
       {
         gradients(dim) = 0.0; // set the gradient to zero
@@ -340,12 +353,14 @@ Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::v
     }
     else // the right side has no neighbor, calculate gradient using the left neighbor
     {
+      std::cout << "FG: the right side has no neighbor, calculate gradient using the left neighbor" << std::endl;
       gradients(dim) = cost_center - getTrajAndRealCost(trajs, next_idx);
       if (gradients(dim) <= 0 && idx(dim) == sizes(dim)-1) // the left neighbor has higher cost and there is no neighbor on the right side
       {
         gradients(dim) = 0.0; // set the gradient to zero
       }
     }
+    std::cout << "FG: At Next idx " << next_idx(0) << next_idx(1) << next_idx(2) << " cost computed" << std::endl;
   }
 
   return gradients;
@@ -365,6 +380,8 @@ Eigen::Vector3i FrenetOptimalTrajectoryPlanner::findDirection(const Eigen::Vecto
       directions(dim) = +1;
     }
   }
+
+  return directions;
 }
 
 // bool FrenetOptimalTrajectoryPlanner::isValid(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx)

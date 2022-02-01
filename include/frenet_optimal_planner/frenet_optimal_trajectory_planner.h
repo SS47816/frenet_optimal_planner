@@ -98,12 +98,12 @@ class FrenetOptimalTrajectoryPlanner
 
   // Constructors
   FrenetOptimalTrajectoryPlanner();
-  FrenetOptimalTrajectoryPlanner(Setting& settings);
+  FrenetOptimalTrajectoryPlanner(const Setting& settings);
 
   // Destructor
-  virtual ~FrenetOptimalTrajectoryPlanner(){};
+  virtual ~FrenetOptimalTrajectoryPlanner() {};
 
-  void updateSettings(Setting& settings);
+  void updateSettings(const Setting& settings);
 
   /* Public Functions */
   // Generate reference curve as the frenet s coordinate
