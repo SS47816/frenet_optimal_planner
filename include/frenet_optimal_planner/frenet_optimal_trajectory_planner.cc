@@ -14,24 +14,46 @@ namespace fop
 FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0)
 {
   this->numbers = std::vector<size_t>(5, size_t(0));
+  this->numbers_min = std::vector<size_t>(5, size_t(100000));
+  this->numbers_max = std::vector<size_t>(5, size_t(0));
   this->total_numbers = std::vector<size_t>(5, size_t(0));
+
   this->time = std::vector<double>(6, double(0));
+  this->time_min = std::vector<double>(6, double(100000));
+  this->time_max = std::vector<double>(6, double(0));
   this->total_time = std::vector<double>(6, double(0));
+
   this->numbers.shrink_to_fit();
+  this->numbers_min.shrink_to_fit();
+  this->numbers_max.shrink_to_fit();
   this->total_numbers.shrink_to_fit();
+
   this->time.shrink_to_fit();
+  this->time_min.shrink_to_fit();
+  this->time_max.shrink_to_fit();
   this->total_time.shrink_to_fit();
 }
 
 FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0)
 {
   this->numbers = std::vector<size_t>(length, size_t(0));
+  this->numbers_min = std::vector<size_t>(length, size_t(100000));
+  this->numbers_max = std::vector<size_t>(length, size_t(0));
   this->total_numbers = std::vector<size_t>(length, size_t(0));
+
   this->time = std::vector<double>(length+1, double(0));
+  this->time_min = std::vector<double>(length+1, double(100000));
+  this->time_max = std::vector<double>(length+1, double(0));
   this->total_time = std::vector<double>(length+1, double(0));
+
   this->numbers.shrink_to_fit();
+  this->numbers_min.shrink_to_fit();
+  this->numbers_max.shrink_to_fit();
   this->total_numbers.shrink_to_fit();
+
   this->time.shrink_to_fit();
+  this->time_min.shrink_to_fit();
+  this->time_max.shrink_to_fit();
   this->total_time.shrink_to_fit();
 }
 
@@ -47,7 +69,11 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
 
   // Update the numbers for the current iteration
   this->numbers = numbers;
-
+  for (size_t i = 0; i < this->length; ++i)
+  {
+    this->numbers_min[i] = std::min(this->numbers_min[i], numbers[i]);
+    this->numbers_max[i] = std::max(this->numbers_max[i], numbers[i]);
+  }
   // Add the current numbers to total numbers
   std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<size_t>());
   
@@ -58,7 +84,14 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
     this->time[i] = elapsed_time.count();
   }
   const std::chrono::duration<double, std::milli> elapsed_time = timestamps.back() - timestamps.front();
-  this->time.back() = elapsed_time.count();
+  this->time[this->length] = elapsed_time.count();
+
+  // Update the time for the current iteration
+  for (size_t i = 0; i < this->length; ++i)
+  {
+    this->time_min[i] = std::min(this->time_min[i], this->time[i]);
+    this->time_max[i] = std::max(this->time_max[i], this->time[i]);
+  }
 
   // Add the current elapsed_time to total time, in [ms]
   std::transform(this->total_time.begin(), this->total_time.end(), this->time.begin(), this->total_time.begin(), std::plus<double>());
@@ -76,6 +109,26 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Step 5 : Checked Collisions for  " << this->numbers[4] << " PolygonPairs in " << this->time[4] << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->time[5] << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
 
+  // Print Summary for Best Case performance
+  std::cout << " " << std::endl;
+  std::cout << "Summary: Best Case Performance  (" << this->count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Predicted               " << this->numbers_min[0]/this->count << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
+  std::cout << "Step 2 : Generated               " << this->numbers_min[1]/this->count << " End States   in " << this->time_min[1] << " ms" << std::endl;
+  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_min[2]/this->count << " Trajectories in " << this->time_min[2] << " ms" << std::endl;
+  std::cout << "Step 4 : Validated               " << this->numbers_min[3]/this->count << " Trajectories in " << this->time_min[3] << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_min[4]/this->count << " PolygonPairs in " << this->time_min[4] << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->time_min[5] << " ms (or " << 1000/this->time_min[5] << " Hz)" << std::endl;
+
+  // Print Summary for Worst Case performance
+  std::cout << " " << std::endl;
+  std::cout << "Summary: Worst Case Performance (" << this->count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Predicted               " << this->numbers_max[0]/this->count << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
+  std::cout << "Step 2 : Generated               " << this->numbers_max[1]/this->count << " End States   in " << this->time_max[1] << " ms" << std::endl;
+  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_max[2]/this->count << " Trajectories in " << this->time_max[2] << " ms" << std::endl;
+  std::cout << "Step 4 : Validated               " << this->numbers_max[3]/this->count << " Trajectories in " << this->time_max[3] << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_max[4]/this->count << " PolygonPairs in " << this->time_max[4] << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->time_max[5] << " ms (or " << 1000/this->time_max[5] << " Hz)" << std::endl;
+
   // Print Summary for average performance
   std::cout << " " << std::endl;
   std::cout << "Summary: Average Performance (" << this->count << " iterations so far)" << std::endl;
@@ -84,7 +137,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Step 3 : Generated & Evaluated   " << this->total_numbers[2]/this->count << " Trajectories in " << this->total_time[2]/this->count << " ms" << std::endl;
   std::cout << "Step 4 : Validated               " << this->total_numbers[3]/this->count << " Trajectories in " << this->total_time[3]/this->count << " ms" << std::endl;
   std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/this->count << " PolygonPairs in " << this->total_time[4]/this->count << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms (or " << 1000/(this->total_time[5]/this->count) << " Hz)" << std::endl;
 }
 
 FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
@@ -157,11 +210,12 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   bool converged = false;
   while (!converged)
   {
-    num_iter++;
-    std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-    std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+    // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+    // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+
     // Perform a search for the real best trajectory using gradient descent
     converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
+    num_iter++;
   }
   std::cout << "FOP: Search Done in " << num_iter << " iterations" << std::endl;
   numbers.emplace_back(num_trajs_generated);
@@ -303,16 +357,14 @@ bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::v
 {
   if (trajs[idx(0)][idx(1)][idx(2)].is_used)
   {
-    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
+    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
     return true; // converged
   }
   else
   {
-    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
+    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
     trajs[idx(0)][idx(1)][idx(2)].is_used = true; // label this traj as searched
-    
     const auto gradients = findGradients(trajs, idx, num_traj);
-    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " Gradients Found" << std::endl;
 
     int grad_dim = 0;
     double max_grad = gradients(0);

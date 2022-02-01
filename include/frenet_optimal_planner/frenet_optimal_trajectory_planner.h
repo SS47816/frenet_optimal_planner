@@ -15,6 +15,9 @@
 #include <future>
 #include <queue>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <autoware_msgs/DetectedObjectArray.h>
+
 #include "frenet.h"
 #include "math_utils.h"
 #include "spline.h"
@@ -22,15 +25,8 @@
 #include "vehicle.h"
 #include "quintic_polynomial.h"
 #include "quartic_polynomial.h"
-
-// #include <ros/ros.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <autoware_msgs/DetectedObjectArray.h>
-
 #include "sat_collision_checker.h"
 
-// #define TRUE_SIZE_LENGTH 3
-// #define TRUE_SIZE_MARGIN 0.3
 
 namespace fop
 {
@@ -86,8 +82,12 @@ class FrenetOptimalTrajectoryPlanner
     int length;
     size_t count;
     std::vector<size_t> numbers;
+    std::vector<size_t> numbers_min;
+    std::vector<size_t> numbers_max;
     std::vector<size_t> total_numbers;
     std::vector<double> time;
+    std::vector<double> time_min;
+    std::vector<double> time_max;
     std::vector<double> total_time;
 
     TestResult();
