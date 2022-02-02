@@ -72,7 +72,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Step 3 : Checked Constraints for " << this->total_numbers[2]/this->count << " Trajectories in " << this->total_time[2]/this->count << " ms" << std::endl;
   std::cout << "Step 4 : Computed Cost for       " << this->total_numbers[3]/this->count << " Trajectories in " << this->total_time[3]/this->count << " ms" << std::endl;
   std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/this->count << " PolygonPairs in " << this->total_time[4]/this->count << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms (or " << 1000/(this->total_time[5]/this->count) << " Hz)" << std::endl;
 }
 
 FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
