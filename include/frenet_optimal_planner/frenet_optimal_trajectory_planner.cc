@@ -71,8 +71,8 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
   this->numbers = numbers;
   for (size_t i = 0; i < this->length; ++i)
   {
-    this->numbers_min[i] = std::min(this->numbers_min[i], numbers[i]);
-    this->numbers_max[i] = std::max(this->numbers_max[i], numbers[i]);
+    this->numbers_min[i] = std::min(this->numbers_min[i], this->numbers[i]);
+    this->numbers_max[i] = std::max(this->numbers_max[i], this->numbers[i]);
   }
   // Add the current numbers to total numbers
   std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<size_t>());
@@ -87,7 +87,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
   this->time[this->length] = elapsed_time.count();
 
   // Update the time for the current iteration
-  for (size_t i = 0; i < this->length; ++i)
+  for (size_t i = 0; i < this->length+1; ++i)
   {
     this->time_min[i] = std::min(this->time_min[i], this->time[i]);
     this->time_max[i] = std::max(this->time_max[i], this->time[i]);
