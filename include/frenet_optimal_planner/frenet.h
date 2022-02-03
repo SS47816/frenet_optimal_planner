@@ -47,6 +47,9 @@ class FrenetPath
   // Destructor
   virtual ~FrenetPath() {};
 
+  friend bool operator < (const FrenetPath& lhs, const FrenetPath& rhs);
+  friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
+
   int lane_id;
   // checks
   bool constraint_passed;

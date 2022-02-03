@@ -22,10 +22,12 @@ public:
   bool check_collision(geometry_msgs::Polygon rect, geometry_msgs::Polygon obstacle_poly);
   
   //Construct a rectangle with coordinates in the map frame.
-  geometry_msgs::Polygon construct_rectangle(double centre_x, double centre_y, double yaw, double length, double width, double margin);
+  geometry_msgs::Polygon construct_rectangle(const double centre_x, const double centre_y, const double yaw, 
+                                             const double length, const double width, 
+                                             const double margin_lon, const double margin_lat);
 
   geometry_msgs::Polygon construct_straight_bumper(double centre_x, double centre_y, double yaw,
-                                                                    double length, double width, double margin);
+                                                   double length, double width, double margin);
   
   //Removes the top layer of a 3D convex hull.
   geometry_msgs::Polygon remove_top_layer(geometry_msgs::Polygon poly);

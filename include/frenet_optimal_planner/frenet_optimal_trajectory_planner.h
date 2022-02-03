@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 #include <future>
+#include <queue>
 
 #include "frenet.h"
 #include "math_utils.h"
@@ -112,6 +113,7 @@ class FrenetOptimalTrajectoryPlanner
                                                      const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
   
   std::shared_ptr<std::vector<fop::FrenetPath>> candidate_trajs_;
+  std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> trajs_queue_;
 
 private:
   Setting settings_;
@@ -124,23 +126,17 @@ private:
 
   // Convert paths from frenet frame to gobal map frame
   int calculateGlobalPaths(std::vector<fop::FrenetPath>& frenet_traj_list, fop::Spline2D& cubic_spline);
-
   // Compute costs for candidate trajectories
   int computeCosts(std::vector<fop::FrenetPath>& frenet_trajs, const double curr_speed);
 
   // Check for vehicle kinematic constraints
-  int checkConstraints(std::vector<fop::FrenetPath>& frenet_traj_list);
-
+  bool checkConstraints(FrenetPath& traj);
   // Check for collisions and calculate obstacle cost
-  int checkCollisions(std::vector<fop::FrenetPath>& frenet_traj_list, const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async);
-  std::pair<bool, int> checkTrajCollision(const fop::FrenetPath& frenet_traj, const autoware_msgs::DetectedObjectArray& obstacles, const double margin);
-  fop::Path predictTrajectory(const autoware_msgs::DetectedObject& obstacle, const double tick_t, const int steps);
-
-  // Select the best paths for each lane option
-  std::vector<fop::FrenetPath> findBestPaths(const std::vector<fop::FrenetPath>& frenet_traj_list);
-
-  // Select the path with the minimum cost
-  fop::FrenetPath findBestPath(const std::vector<fop::FrenetPath>& frenet_traj_list, int target_lane_id);
+  std::vector<Path> predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
+  bool checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
+                       const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async, size_t& num_checks);
+  std::pair<bool, int> checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
+                                          const autoware_msgs::DetectedObjectArray& obstacles, const double margin_lon, const double margin_lat);
 };
 
 }  // namespace fop
