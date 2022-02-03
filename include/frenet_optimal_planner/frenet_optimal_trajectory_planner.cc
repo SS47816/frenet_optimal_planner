@@ -204,63 +204,75 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   numbers.emplace_back(trajs_3d.size()*trajs_3d[0].size()*trajs_3d[0][0].size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
-  // ################################ Search Process #####################################
   size_t num_iter = 0;
   size_t num_trajs_generated = 0;
-  bool converged = false;
-  while (!converged)
-  {
-    // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-    // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
-
-    // Perform a search for the real best trajectory using gradient descent
-    converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
-    num_iter++;
-  }
-  std::cout << "FOP: Search Done in " << num_iter << " iterations" << std::endl;
-  numbers.emplace_back(num_trajs_generated);
-  timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  // ################################ Validation Process #####################################
   size_t num_trajs_validated = 0;
   size_t num_collision_checks = 0;
-  FrenetPath best_traj = FrenetPath();
+
+  FrenetPath best_traj;
   bool best_traj_found = false;
-  while (!best_traj_found && !candidate_trajs_.empty())
+  while(!best_traj_found)
   {
-    num_trajs_validated++;
-    auto candidate_traj = candidate_trajs_.top();
-    candidate_trajs_.pop();
-    
-    // Convert to the global frame
-    convertToGlobalFrame(candidate_traj, cubic_spline);
-    // Check for constraints
-    bool is_safe = checkConstraints(candidate_traj);
-    if (!is_safe)
+    if(!findInitGuess(trajs_3d, best_idx))
     {
-      continue;
+      std::cout << "FOP: Searched through all trajectories, found no suitable candidate" << std::endl;
+      break;
     }
-    else
+
+    // ################################ Search Process #####################################
+    bool converged = false;
+    while (!converged)
     {
-      // Check for collisions
-      if (check_collision)
+      // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+      // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+
+      // Perform a search for the real best trajectory using gradient descent
+      converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
+      num_iter++;
+    }
+    numbers.emplace_back(num_trajs_generated);
+    timestamps.emplace_back(std::chrono::high_resolution_clock::now());
+
+    // ################################ Validation Process #####################################
+    while (!candidate_trajs_.empty())
+    {
+      num_trajs_validated++;
+      auto candidate_traj = candidate_trajs_.top();
+      candidate_trajs_.pop();
+      
+      // Convert to the global frame
+      convertToGlobalFrame(candidate_traj, cubic_spline);
+      // Check for constraints
+      bool is_safe = checkConstraints(candidate_traj);
+      if (!is_safe)
       {
-        is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
+        continue;
       }
       else
       {
-        std::cout << "Collision Checking Skipped" << std::endl;
-        is_safe = true;
+        // Check for collisions
+        if (check_collision)
+        {
+          is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
+        }
+        else
+        {
+          std::cout << "Collision Checking Skipped" << std::endl;
+          is_safe = true;
+        }
+      }
+      
+      if (is_safe)
+      {
+        best_traj_found = true;
+        best_traj = std::move(candidate_traj);
+        std::cout << "FOP: Best Traj Found" << std::endl;
+        break;
       }
     }
-    
-    if (is_safe)
-    {
-      best_traj_found = true;
-      best_traj = std::move(candidate_traj);
-      std::cout << "FOP: Best Traj Found" << std::endl;
-    }
   }
+  
+  std::cout << "FOP: Search Done in " << num_iter << " iterations" << std::endl;
   numbers.emplace_back(num_trajs_validated);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   numbers.emplace_back(num_collision_checks);
@@ -351,6 +363,39 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
   }
 
   return std::pair<std::vector<std::vector<std::vector<FrenetPath>>>, Eigen::Vector3i>(std::move(trajs_3d), idx);
+}
+
+/**
+ * @brief Checks whether frenet paths are safe to execute based on constraints 
+ * @param trajs the 3D Cube of trajectories
+ * @param idx the index of the lowest estimated cost trajectory
+ * @return true if there are still trajs not searched before, false otherwise
+ */
+bool FrenetOptimalTrajectoryPlanner::findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx)
+{
+  double min_cost = std::numeric_limits<double>::max();
+  bool found = false;
+
+  // find the index of the traj with the lowest estimated cost
+  for (int i = 0; i < trajs.size(); i++)  // left being positive
+  {
+    for (int j = 0; j < trajs[0].size(); j++)  // left being positive
+    {
+      for (int k = 0; k < trajs[0][0].size(); k++)  // left being positive
+      {  
+        if (!trajs[i][j][k].is_used && trajs[i][j][k].est_cost < min_cost)
+        {
+          min_cost = trajs[i][j][k].est_cost;
+          idx(0) = i;
+          idx(1) = j;
+          idx(2) = k;
+          found = true;
+        }
+      }
+    }
+  }
+
+  return found;
 }
 
 bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, size_t& num_traj)
@@ -544,26 +589,26 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
     {
       passed = false;
-      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      std::cout << "Condition 0: Contains ilegal values" << std::endl;
       break;
     }
     else if (traj.s_d[i] > settings_.max_speed)
     {
       passed = false;
-      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
     else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
     else if (std::abs(traj.c[i]) > settings_.max_curvature)
     {
       passed = false;
-      // std::cout << "Exceeded max curvature = " << settings_.max_curvature
-      //           << ". Curr curvature = " << (traj.c[i]) << std::endl;
+      std::cout << "Exceeded max curvature = " << settings_.max_curvature
+                << ". Curr curvature = " << (traj.c[i]) << std::endl;
       break;
     }
   }

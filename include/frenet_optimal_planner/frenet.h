@@ -28,13 +28,6 @@ class FrenetState
   // Destructor
   virtual ~FrenetState() {};
 
-  // int lane_id;
-  // bool is_used;
-
-  // double fix_cost;
-  // double est_cost;
-  // double final_cost;
-
   double T;
   double s;
   double s_d;

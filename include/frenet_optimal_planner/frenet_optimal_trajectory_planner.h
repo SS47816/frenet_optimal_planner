@@ -127,7 +127,7 @@ class FrenetOptimalTrajectoryPlanner
   /* Private Functions */
   std::pair<std::vector<std::vector<std::vector<FrenetPath>>>, Eigen::Vector3i> 
   sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed);
-  
+  bool findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx);
   // Find the best init guess based on end states
   bool findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, size_t& num_traj);
   Eigen::Vector3d findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, size_t& num_traj);
