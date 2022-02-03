@@ -117,11 +117,6 @@ private:
   Setting settings_;
   TestResult test_result_;
   SATCollisionChecker sat_collision_checker_;
-  
-  /* Private Functions */
-  // std::vector<FrenetState> sampleEndStates(const fop::FrenetState& frenet_state, const int lane_id,
-  //                                          const double center_offset, const double left_bound, const double right_bound, 
-  //                                          const double desired_speed, const double current_speed);
 
   // Sample candidate trajectories
   std::vector<fop::FrenetPath> generateFrenetPaths(const fop::FrenetState& frenet_state, const int lane_id,
