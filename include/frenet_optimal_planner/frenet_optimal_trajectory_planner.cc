@@ -353,26 +353,26 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
     {
       passed = false;
-      std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
       break;
     }
     else if (traj.s_d[i] > settings_.max_speed)
     {
       passed = false;
-      std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
     else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
     else if (std::abs(traj.c[i]) > settings_.max_curvature)
     {
       passed = false;
-      std::cout << "Exceeded max curvature = " << settings_.max_curvature
-                << ". Curr curvature = " << (traj.c[i]) << std::endl;
+      // std::cout << "Exceeded max curvature = " << settings_.max_curvature
+      //           << ". Curr curvature = " << (traj.c[i]) << std::endl;
       break;
     }
   }
