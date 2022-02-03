@@ -219,7 +219,7 @@ std::vector<fop::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths
       }
 
       // generate longitudinal quartic polynomial
-      const double delta_speed = (settings_.highest_speed - settings_.lowest_speed)/(settings_.num_speed);
+      const double delta_speed = (settings_.highest_speed - settings_.lowest_speed)/(settings_.num_speed - 1);
       for (double sample_speed = settings_.lowest_speed; sample_speed <= settings_.highest_speed; sample_speed += delta_speed)
       {
         if (sample_speed <= 0)  // ensure target speed is positive
