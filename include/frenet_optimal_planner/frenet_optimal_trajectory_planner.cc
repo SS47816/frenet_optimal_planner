@@ -153,8 +153,8 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
 
     // Check the constraints
     num_constraint_checks++;
-    bool is_safe = checkConstraints(best_traj);
-    if (!is_safe)
+    bool is_safe;
+    if (!checkConstraints(best_traj))
     {
       continue;
     }
@@ -175,7 +175,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
     if (is_safe)
     {
       best_traj_found = true;
-      best_traj = std::move(best_traj);
       std::cout << "FOP: Best Traj Found" << std::endl;
       break;
     }
@@ -183,7 +182,6 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
   numbers.push_back(num_constraint_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   numbers.push_back(num_collision_checks);
-  const auto start_time = std::chrono::high_resolution_clock::now();
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   test_result_.updateCount(std::move(numbers), std::move(timestamps));
   test_result_.printSummary();
@@ -371,7 +369,7 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     else if (std::abs(traj.c[i]) > settings_.max_curvature)
     {
       passed = false;
-      // std::cout << "Exceeded max curvature = " << settings_.max_curvature
+      // std::cout << "Condition 3: Exceeded max curvature = " << settings_.max_curvature
       //           << ". Curr curvature = " << (traj.c[i]) << std::endl;
       break;
     }
@@ -393,18 +391,20 @@ int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& f
     // calculate total squared jerks
     for (int i = 0; i < traj.t.size(); i++)
     {
-      jerk_s += pow(traj.s_ddd[i], 2);
-      jerk_d += pow(traj.d_ddd[i], 2);
+      jerk_s += std::pow(traj.s_ddd[i], 2);
+      jerk_d += std::pow(traj.d_ddd[i], 2);
     }
 
     // encourage driving inbetween the desired speed and current speed
-    const double speed_diff = pow(settings_.highest_speed - traj.s_d.back(), 2) + 0.5*pow(curr_speed - traj.s_d.back(), 2);
+    const double speed_diff_pct = (traj.s_d.back() - settings_.lowest_speed)/(settings_.highest_speed - settings_.lowest_speed);
+    const double speed_diff_cost = std::pow(speed_diff_pct, 2);
 
     // encourage longer planning time
-    const double planning_time_cost = settings_.k_time * (1 - traj.t.size()*settings_.tick_t / settings_.max_t);
+    const double planning_time_pct = (traj.t.size()*settings_.tick_t - settings_.min_t)/(settings_.max_t - settings_.min_t);
+    const double planning_time_cost = settings_.k_time * (1 - planning_time_pct);
 
-    traj.cd = settings_.k_jerk * jerk_d + planning_time_cost + settings_.k_diff * pow(traj.d.back() - settings_.center_offset, 2);
-    traj.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff;
+    traj.cd = settings_.k_jerk * jerk_d + planning_time_cost + settings_.k_diff * std::pow(traj.d.back() - settings_.center_offset, 2);
+    traj.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff_cost;
     traj.cf = settings_.k_lateral * traj.cd + settings_.k_longitudinal * traj.cs;
     
     num_checks++;
