@@ -343,21 +343,26 @@ public:
 
     for (const auto& traj : candidate_trajs)
     {
-      if (!traj.constraint_passed)
-      {
-        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "unsmooth", getColor(COLOR::RED), z_map, max_speed));
-      }
-      else if (!traj.collision_passed)
-      {
-        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "unsafe", getColor(COLOR::DARK_RED), z_map, max_speed));
-      }
-      else
-      {
-        const double R = 1.0*traj.cf/max_cost;
-        const double G = 0.7*traj.cf/min_cost;
-        std_msgs::ColorRGBA color = parseColor(R, G, 0.2, 0.8);
-        candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "safe", color, z_map, max_speed));
-      }
+      const double R = 1.0*(traj.cf - min_cost)/(max_cost - min_cost);
+      const double G = 0.7*(1 - R);
+      std_msgs::ColorRGBA color = parseColor(R, G, 0.2, 0.8);
+      candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "candidate", color, z_map, max_speed));
+      
+      // if (!traj.constraint_passed)
+      // {
+      //   candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "candidate", getColor(COLOR::RED), z_map, max_speed));
+      // }
+      // else if (!traj.collision_passed)
+      // {
+      //   candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "candidate", getColor(COLOR::DARK_RED), z_map, max_speed));
+      // }
+      // else
+      // {
+      //   const double R = 1.0*(traj.cf - min_cost)/(max_cost - min_cost);
+      //   const double G = 0.7*(1 - R);
+      //   std_msgs::ColorRGBA color = parseColor(R, G, 0.2, 0.8);
+      //   candidate_trajs_markers.markers.emplace_back(frenetPathToMarker(traj, marker_id, "candidate", color, z_map, max_speed));
+      // }
     }
 
     return candidate_trajs_markers;
