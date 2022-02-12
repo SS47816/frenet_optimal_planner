@@ -360,19 +360,25 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
       // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
-    else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
+    else if (traj.s_dd[i] > settings_.max_accel)
     {
       passed = false;
-      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
-    else if (std::abs(traj.c[i]) > settings_.max_curvature)
+    else if (traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      // std::cout << "Condition 3: Exceeded max curvature = " << settings_.max_curvature
-      //           << ". Curr curvature = " << (traj.c[i]) << std::endl;
+      std::cout << "Condition 3: Exceeded Max Deceleration" << std::endl;
       break;
     }
+    // else if (std::abs(traj.c[i]) > settings_.max_curvature)
+    // {
+    //   passed = false;
+    //   std::cout << "Condition 4: Exceeded max curvature = " << settings_.max_curvature
+    //             << ". Curr curvature = " << (traj.c[i]) << std::endl;
+    //   break;
+    // }
   }
 
   traj.constraint_passed = passed;
@@ -385,15 +391,27 @@ int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& f
   int num_checks = 0;
   for (auto& traj : frenet_trajs)
   {
-    // calculate the costs
-    double jerk_s = 0.0;
-    double jerk_d = 0.0;
-    // calculate total squared jerks
+    double max_jerk_s, max_jerk_d = 0.0;
     for (int i = 0; i < traj.t.size(); i++)
     {
-      jerk_s += std::pow(traj.s_ddd[i], 2);
-      jerk_d += std::pow(traj.d_ddd[i], 2);
+      // find the max jerk in this trajectory
+      max_jerk_s = std::max(max_jerk_s, traj.s_ddd[i]);
+      max_jerk_d = std::max(max_jerk_d, traj.d_ddd[i]);
     }
+
+    // calculate the costs
+    double jerk_s, jerk_d = 0.0;
+    double jerk_sqr_s, jerk_sqr_d = 0.0;
+    for (int i = 0; i < traj.t.size(); i++)
+    {
+      // calculate total squared jerks
+      jerk_sqr_s += std::pow(traj.s_ddd[i]/max_jerk_s, 2);
+      jerk_sqr_d += std::pow(traj.d_ddd[i]/max_jerk_d, 2);
+      jerk_s += std::abs(traj.s_ddd[i]/max_jerk_s);
+      jerk_d += std::abs(traj.d_ddd[i]/max_jerk_d);
+    }
+    const double jerk_cost_s = jerk_sqr_s/jerk_s;
+    const double jerk_cost_d = jerk_sqr_d/jerk_d;
 
     // encourage driving inbetween the desired speed and current speed
     const double speed_diff_pct = (traj.s_d.back() - settings_.lowest_speed)/(settings_.highest_speed - settings_.lowest_speed);
@@ -403,8 +421,8 @@ int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& f
     const double planning_time_pct = (traj.t.size()*settings_.tick_t - settings_.min_t)/(settings_.max_t - settings_.min_t);
     const double planning_time_cost = settings_.k_time * (1 - planning_time_pct);
 
-    traj.cd = settings_.k_jerk * jerk_d + planning_time_cost + settings_.k_diff * std::pow(traj.d.back() - settings_.center_offset, 2);
-    traj.cs = settings_.k_jerk * jerk_s + planning_time_cost + settings_.k_diff * speed_diff_cost;
+    traj.cd = settings_.k_jerk * jerk_cost_d + planning_time_cost + settings_.k_diff * std::pow(traj.d.back() - settings_.center_offset, 2);
+    traj.cs = settings_.k_jerk * jerk_cost_s + planning_time_cost + settings_.k_diff * speed_diff_cost;
     traj.cf = settings_.k_lateral * traj.cd + settings_.k_longitudinal * traj.cs;
     
     num_checks++;

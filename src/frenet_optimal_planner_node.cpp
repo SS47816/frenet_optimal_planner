@@ -70,6 +70,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_accel = fop::Vehicle::max_acceleration();
   SETTINGS.max_decel = fop::Vehicle::max_deceleration();
   SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
+  // SETTINGS.max_jerk_s = ;
+  // SETTINGS.max_jerk_d = ;
   // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
@@ -676,37 +678,36 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
     diff = std::min(traj_max_size - curr_trajectory_.x.size(), next_traj.x.size());
     // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Current Size: " << traj_max_size << " Diff: " << diff
     //           << " Next Path Size: " << next_traj.x.size() << std::endl;
-  }
 
-  // Concatenate the best path to the output path
-  for (size_t i = 0; i < diff; i++)
-  {
-    double wp_seperation;
-
-    // Check if the separation between adjacent waypoint are permitted
-    if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
+    // Concatenate the best path to the output path
+    for (size_t i = 0; i < diff; i++)
     {
-      wp_seperation = fop::distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
-    }
-    else
-    {
-      wp_seperation = fop::distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
-    }
+      // Check if the separation between adjacent waypoint are permitted
+      double wp_seperation;
+      if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
+      {
+        wp_seperation = fop::distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
+      }
+      else
+      {
+        wp_seperation = fop::distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
+      }
 
-    // If the separation is too big/small, reject point onward
-    if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
-    {
-      // ROS_WARN("Local Planner: waypoint out of bound, rejected");
-      // regenerate_flag_ = true;
-      break;
+      // If the separation is too big/small, reject point onward
+      if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
+      {
+        ROS_WARN("Local Planner: waypoint out of bound, rejected");
+        regenerate_flag_ = true;
+        break;
+      }
+
+      curr_trajectory_.x.push_back(next_traj.x[i]);
+      curr_trajectory_.y.push_back(next_traj.y[i]);
+      curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
+      curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
+
+      // std::cout << "Concatenate round " << i << ": Output Path Size: " << curr_trajectory_.x.size() << std::endl;
     }
-
-    curr_trajectory_.x.push_back(next_traj.x[i]);
-    curr_trajectory_.y.push_back(next_traj.y[i]);
-    curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
-    curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
-
-    // std::cout << "Concatenate round " << i << ": Output Path Size: " << curr_trajectory_.x.size() << std::endl;
   }
 
   // Calculate control outputs and Erase the point that have been executed
@@ -734,6 +735,7 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
       curr_trajectory_.x.erase(curr_trajectory_.x.begin());
       curr_trajectory_.y.erase(curr_trajectory_.y.begin());
       curr_trajectory_.yaw.erase(curr_trajectory_.yaw.begin());
+      curr_trajectory_.v.erase(curr_trajectory_.v.begin());
     }
   }
   else
