@@ -363,13 +363,13 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     else if (traj.s_dd[i] > settings_.max_accel)
     {
       passed = false;
-      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
     else if (traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      std::cout << "Condition 3: Exceeded Max Deceleration" << std::endl;
+      // std::cout << "Condition 3: Exceeded Max Deceleration" << std::endl;
       break;
     }
     // else if (std::abs(traj.c[i]) > settings_.max_curvature)

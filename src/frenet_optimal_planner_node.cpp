@@ -70,8 +70,6 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_accel = fop::Vehicle::max_acceleration();
   SETTINGS.max_decel = fop::Vehicle::max_deceleration();
   SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
-  // SETTINGS.max_jerk_s = ;
-  // SETTINGS.max_jerk_d = ;
   // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
@@ -446,7 +444,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   }
 
   // Check if the global waypoints need to be filtered
-  const double ref_spline_length = SETTINGS.highest_speed*(SETTINGS.max_t + SETTINGS.min_t);
+  const double ref_spline_length = SETTINGS.highest_speed*(SETTINGS.max_t);
   if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= ref_spline_length)
   {
     // Filter the waypoints to a uniform density
