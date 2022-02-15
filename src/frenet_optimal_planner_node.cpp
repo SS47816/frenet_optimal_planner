@@ -459,7 +459,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
   }
 
   // Check if the global waypoints need to be filtered
-  const double ref_spline_length = SETTINGS.highest_speed*(SETTINGS.max_t + SETTINGS.min_t);
+  const double ref_spline_length = SETTINGS.highest_speed*(SETTINGS.max_t);
   if ((lane_.points.back().point.s - lane_.points[start_id].point.s) >= ref_spline_length)
   {
     // Filter the waypoints to a uniform density
@@ -711,8 +711,8 @@ void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int
     // If the separation is too big/small, reject point onward
     if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
     {
-      // ROS_WARN("Local Planner: waypoint out of bound, rejected");
-      // regenerate_flag_ = true;
+      ROS_WARN("Local Planner: waypoint out of bound, rejected");
+      regenerate_flag_ = true;
       break;
     }
 
@@ -749,6 +749,7 @@ void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int
       curr_trajectory_.x.erase(curr_trajectory_.x.begin());
       curr_trajectory_.y.erase(curr_trajectory_.y.begin());
       curr_trajectory_.yaw.erase(curr_trajectory_.yaw.begin());
+      curr_trajectory_.v.erase(curr_trajectory_.v.begin());
     }
   }
   else
