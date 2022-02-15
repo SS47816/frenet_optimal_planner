@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 
+#include "Eigen/Dense"
 #include "lane.h"
 #include "math_utils.h"
 #include "vehicle_state.h"
@@ -50,6 +51,7 @@ class FrenetPath
   friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
 
   // flags
+  Eigen::Vector3i idx;
   int lane_id;
   bool is_used;       // label if this trajectory has been searched before
   bool is_generated;  // label if this trajectory has been generated or not

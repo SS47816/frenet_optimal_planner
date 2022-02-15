@@ -119,6 +119,7 @@ class FrenetOptimalTrajectoryPlanner
                                                 const bool check_collision, const bool use_async);
   
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
+  std::vector<FrenetPath> all_trajs_;
 
  private:
   Setting settings_;

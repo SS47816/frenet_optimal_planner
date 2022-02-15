@@ -191,7 +191,10 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   /* --------------------------------- Construction Zone -------------------------------- */
-  
+  // Clear the canidate trajectories from the last planning cycle
+  std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> empty;
+  std::swap(candidate_trajs_, empty);
+
   // Initialize start state and obstacle trajectories
   start_state_ = start_state;
   const auto obstacle_trajs = predictTrajectories(obstacles);
@@ -210,24 +213,33 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   int num_trajs_validated = 0;
   int num_collision_checks = 0;
 
+  // Start the iterative search 
   FrenetPath best_traj;
   bool best_traj_found = false;
   while(!best_traj_found)
   {
-    if(!findInitGuess(trajs_3d, best_idx))
+    if (candidate_trajs_.empty())
     {
-      std::cout << "FOP: Searched through all trajectories, found no suitable candidate" << std::endl;
-      break;
+      if (!findInitGuess(trajs_3d, best_idx))
+      {
+        // all samples have been searched and no feasible candidate found
+        std::cout << "FOP: Searched through all trajectories, found no suitable candidate" << std::endl;
+        break;
+      }
+    }
+    else
+    {
+      best_idx = candidate_trajs_.top().idx;
     }
 
     // ################################ Search Process #####################################
     bool converged = false;
     while (!converged)
     {
-      // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-      // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+      std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+      std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
 
-      // Perform a search for the real best trajectory using gradient descent
+      // Perform a search for the real best trajectory using gradients
       converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
       num_iter++;
     }
@@ -235,11 +247,13 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
     // ################################ Validation Process #####################################
-    while (!candidate_trajs_.empty())
+    std::cout << "FOP: Validating Candiate Trajectory" << std::endl;
+    
+    if (!candidate_trajs_.empty())
     {
-      num_trajs_validated++;
       auto candidate_traj = candidate_trajs_.top();
       candidate_trajs_.pop();
+      num_trajs_validated++;
       
       // Convert to the global frame
       convertToGlobalFrame(candidate_traj, cubic_spline);
@@ -378,11 +392,11 @@ bool FrenetOptimalTrajectoryPlanner::findInitGuess(const std::vector<std::vector
   bool found = false;
 
   // find the index of the traj with the lowest estimated cost
-  for (int i = 0; i < trajs.size(); i++)  // left being positive
+  for (int i = 0; i < trajs.size(); i++)
   {
-    for (int j = 0; j < trajs[0].size(); j++)  // left being positive
+    for (int j = 0; j < trajs[0].size(); j++)
     {
-      for (int k = 0; k < trajs[0][0].size(); k++)  // left being positive
+      for (int k = 0; k < trajs[0][0].size(); k++)
       {  
         if (!trajs[i][j][k].is_used && trajs[i][j][k].est_cost < min_cost)
         {
@@ -496,6 +510,7 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
   {
     num_traj++;
     trajs[i][j][k].is_generated = true;
+    trajs[i][j][k].idx = idx;
     
     // calculate the costs
     double jerk_s, jerk_d = 0.0;
@@ -536,7 +551,9 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
     trajs[i][j][k].dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_cost_s + settings_.k_lat * jerk_cost_d);
     trajs[i][j][k].final_cost = trajs[i][j][k].fix_cost + trajs[i][j][k].dyn_cost;
 
+    // Add this trajectory to the candidate queue
     candidate_trajs_.push(trajs[i][j][k]);
+    all_trajs_.push_back(trajs[i][j][k]);
 
     return trajs[i][j][k].final_cost;
   }

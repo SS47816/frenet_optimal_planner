@@ -242,7 +242,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC);
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
-  // publishCandidateTrajs(*frenet_planner_.candidate_trajs_);
+  publishCandidateTrajs(frenet_planner_.all_trajs_);
   if (best_traj_list.empty())
   {
     ROS_ERROR("Local Planner: Frenet Optimal Planning Could Not Find a Safe Trajectory");
