@@ -75,6 +75,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_accel = config.max_acceleration;
   SETTINGS.max_decel = -config.max_deceleration;
   SETTINGS.max_curvature = config.max_curvature;
+  SETTINGS.max_jerk_s = config.max_jerk_lon;
+  SETTINGS.max_jerk_d = config.max_jerk_lat;
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;

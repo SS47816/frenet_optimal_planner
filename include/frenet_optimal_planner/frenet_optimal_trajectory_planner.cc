@@ -497,8 +497,8 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
     trajs[i][j][k].is_generated = true;
     
     // calculate the costs
-    double jerk_s = 0.0;
-    double jerk_d = 0.0;
+    double jerk_s, jerk_d = 0.0;
+    double jerk_sqr_s, jerk_sqr_d = 0.0;
 
     // generate lateral quintic polynomial
     QuinticPolynomial lateral_quintic_poly = QuinticPolynomial(start_state_, trajs[i][j][k].end_state);
@@ -511,7 +511,8 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
       trajs[i][j][k].d_d.emplace_back(lateral_quintic_poly.calculateFirstDerivative(t));
       trajs[i][j][k].d_dd.emplace_back(lateral_quintic_poly.calculateSecondDerivative(t));
       trajs[i][j][k].d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
-      jerk_d += std::pow(trajs[i][j][k].d_ddd.back(), 2);
+      jerk_sqr_d += std::pow(trajs[i][j][k].d_ddd.back()/settings_.max_jerk_d, 2);
+      jerk_d += std::abs(trajs[i][j][k].d_ddd.back()/settings_.max_jerk_d);
     }
 
     // generate longitudinal quartic polynomial
@@ -524,10 +525,14 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
       trajs[i][j][k].s_d.emplace_back(longitudinal_quartic_poly.calculateFirstDerivative(t));
       trajs[i][j][k].s_dd.emplace_back(longitudinal_quartic_poly.calculateSecondDerivative(t));
       trajs[i][j][k].s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
-      jerk_s += std::pow(trajs[i][j][k].s_ddd.back(), 2);
+      jerk_sqr_s += std::pow(trajs[i][j][k].s_ddd.back()/settings_.max_jerk_s, 2);
+      jerk_s += std::abs(trajs[i][j][k].s_ddd.back()/settings_.max_jerk_s);
     }
+
+    const double jerk_cost_s = jerk_sqr_s/jerk_s;
+    const double jerk_cost_d = jerk_sqr_d/jerk_d;
     
-    trajs[i][j][k].dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_s + settings_.k_lat * jerk_d);
+    trajs[i][j][k].dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_cost_s + settings_.k_lat * jerk_cost_d);
     trajs[i][j][k].final_cost = trajs[i][j][k].fix_cost + trajs[i][j][k].dyn_cost;
 
     candidate_trajs_.push(trajs[i][j][k]);

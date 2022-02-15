@@ -58,6 +58,8 @@ class FrenetOptimalTrajectoryPlanner
     double max_accel;           // maximum acceleration [m/ss]
     double max_decel;           // maximum deceleration [m/ss]
     double max_curvature;       // maximum curvature [rad/m]
+    double max_jerk_s;          // maximum longitudinal jerk [m/s^3]
+    double max_jerk_d;          // maximum lateral jerk [m/s^3]
     // double steering_angle_rate; // [rad/s]
 
     // Cost Weights
