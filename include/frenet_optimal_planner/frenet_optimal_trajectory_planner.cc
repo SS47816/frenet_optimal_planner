@@ -13,10 +13,10 @@ namespace fop
 
 FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0)
 {
-  this->numbers = std::vector<size_t>(5, size_t(0));
-  this->numbers_min = std::vector<size_t>(5, size_t(100000));
-  this->numbers_max = std::vector<size_t>(5, size_t(0));
-  this->total_numbers = std::vector<size_t>(5, size_t(0));
+  this->numbers = std::vector<int>(5, int(0));
+  this->numbers_min = std::vector<int>(5, int(100000));
+  this->numbers_max = std::vector<int>(5, int(0));
+  this->total_numbers = std::vector<int>(5, int(0));
 
   this->time = std::vector<double>(6, double(0));
   this->time_min = std::vector<double>(6, double(100000));
@@ -36,10 +36,10 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0)
 
 FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0)
 {
-  this->numbers = std::vector<size_t>(length, size_t(0));
-  this->numbers_min = std::vector<size_t>(length, size_t(100000));
-  this->numbers_max = std::vector<size_t>(length, size_t(0));
-  this->total_numbers = std::vector<size_t>(length, size_t(0));
+  this->numbers = std::vector<int>(length, int(0));
+  this->numbers_min = std::vector<int>(length, int(100000));
+  this->numbers_max = std::vector<int>(length, int(0));
+  this->total_numbers = std::vector<int>(length, int(0));
 
   this->time = std::vector<double>(length+1, double(0));
   this->time_min = std::vector<double>(length+1, double(100000));
@@ -57,7 +57,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : lengt
   this->total_time.shrink_to_fit();
 }
 
-void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps)
+void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps)
 {
   if (numbers.size() != this->length || timestamps.size() != this->length+1)
   {
@@ -69,13 +69,13 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
 
   // Update the numbers for the current iteration
   this->numbers = numbers;
-  for (size_t i = 0; i < this->length; ++i)
+  for (int i = 0; i < this->length; ++i)
   {
     this->numbers_min[i] = std::min(this->numbers_min[i], this->numbers[i]);
     this->numbers_max[i] = std::max(this->numbers_max[i], this->numbers[i]);
   }
   // Add the current numbers to total numbers
-  std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<size_t>());
+  std::transform(this->total_numbers.begin(), this->total_numbers.end(), numbers.begin(), this->total_numbers.begin(), std::plus<int>());
   
   // Calculate the elapsed_time for the current iteration, in [ms]
   for (int i = 0; i < timestamps.size() - 1; i++)
@@ -87,7 +87,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
   this->time[this->length] = elapsed_time.count();
 
   // Update the time for the current iteration
-  for (size_t i = 0; i < this->length+1; ++i)
+  for (int i = 0; i < this->length+1; ++i)
   {
     this->time_min[i] = std::min(this->time_min[i], this->time[i]);
     this->time_max[i] = std::max(this->time_max[i], this->time[i]);
@@ -99,9 +99,10 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
 
 void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
 {
+  const int count = std::max(1, this->count);
   // Print Summary for this iteration
   std::cout << " " << std::endl;
-  std::cout << "Summary: This Planning Iteration (iteration no." << this->count << ")" << std::endl;
+  std::cout << "Summary: This Planning Iteration (iteration no." << count << ")" << std::endl;
   std::cout << "Step 1 : Predicted               " << this->numbers[0] << " Trajectories in " << this->time[0] << " ms" << std::endl;
   std::cout << "Step 2 : Generated               " << this->numbers[1] << " End States   in " << this->time[1] << " ms" << std::endl;
   std::cout << "Step 3 : Generated & Evaluated   " << this->numbers[2] << " Trajectories in " << this->time[2] << " ms" << std::endl;
@@ -111,33 +112,33 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
 
   // Print Summary for Best Case performance
   std::cout << " " << std::endl;
-  std::cout << "Summary: Best Case Performance  (" << this->count << " iterations so far)" << std::endl;
-  std::cout << "Step 1 : Predicted               " << this->numbers_min[0]/this->count << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
-  std::cout << "Step 2 : Generated               " << this->numbers_min[1]/this->count << " End States   in " << this->time_min[1] << " ms" << std::endl;
-  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_min[2]/this->count << " Trajectories in " << this->time_min[2] << " ms" << std::endl;
-  std::cout << "Step 4 : Validated               " << this->numbers_min[3]/this->count << " Trajectories in " << this->time_min[3] << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_min[4]/this->count << " PolygonPairs in " << this->time_min[4] << " ms" << std::endl;
+  std::cout << "Summary: Best Case Performance  (" << count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Predicted               " << this->numbers_min[0] << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
+  std::cout << "Step 2 : Generated               " << this->numbers_min[1] << " End States   in " << this->time_min[1] << " ms" << std::endl;
+  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_min[2] << " Trajectories in " << this->time_min[2] << " ms" << std::endl;
+  std::cout << "Step 4 : Validated               " << this->numbers_min[3] << " Trajectories in " << this->time_min[3] << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_min[4] << " PolygonPairs in " << this->time_min[4] << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->time_min[5] << " ms (or " << 1000/this->time_min[5] << " Hz)" << std::endl;
 
   // Print Summary for Worst Case performance
   std::cout << " " << std::endl;
-  std::cout << "Summary: Worst Case Performance (" << this->count << " iterations so far)" << std::endl;
-  std::cout << "Step 1 : Predicted               " << this->numbers_max[0]/this->count << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
-  std::cout << "Step 2 : Generated               " << this->numbers_max[1]/this->count << " End States   in " << this->time_max[1] << " ms" << std::endl;
-  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_max[2]/this->count << " Trajectories in " << this->time_max[2] << " ms" << std::endl;
-  std::cout << "Step 4 : Validated               " << this->numbers_max[3]/this->count << " Trajectories in " << this->time_max[3] << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_max[4]/this->count << " PolygonPairs in " << this->time_max[4] << " ms" << std::endl;
+  std::cout << "Summary: Worst Case Performance (" << count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Predicted               " << this->numbers_max[0] << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
+  std::cout << "Step 2 : Generated               " << this->numbers_max[1] << " End States   in " << this->time_max[1] << " ms" << std::endl;
+  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_max[2] << " Trajectories in " << this->time_max[2] << " ms" << std::endl;
+  std::cout << "Step 4 : Validated               " << this->numbers_max[3] << " Trajectories in " << this->time_max[3] << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_max[4] << " PolygonPairs in " << this->time_max[4] << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->time_max[5] << " ms (or " << 1000/this->time_max[5] << " Hz)" << std::endl;
 
   // Print Summary for average performance
   std::cout << " " << std::endl;
-  std::cout << "Summary: Average Performance (" << this->count << " iterations so far)" << std::endl;
-  std::cout << "Step 1 : Predicted               " << this->total_numbers[0]/this->count << " Trajectories in " << this->total_time[0]/this->count << " ms" << std::endl;
-  std::cout << "Step 2 : Generated               " << this->total_numbers[1]/this->count << " End States   in " << this->total_time[1]/this->count << " ms" << std::endl;
-  std::cout << "Step 3 : Generated & Evaluated   " << this->total_numbers[2]/this->count << " Trajectories in " << this->total_time[2]/this->count << " ms" << std::endl;
-  std::cout << "Step 4 : Validated               " << this->total_numbers[3]/this->count << " Trajectories in " << this->total_time[3]/this->count << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/this->count << " PolygonPairs in " << this->total_time[4]/this->count << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << this->total_time[5]/this->count << " ms (or " << 1000/(this->total_time[5]/this->count) << " Hz)" << std::endl;
+  std::cout << "Summary: Average Performance (" << count << " iterations so far)" << std::endl;
+  std::cout << "Step 1 : Predicted               " << this->total_numbers[0]/count << " Trajectories in " << this->total_time[0]/count << " ms" << std::endl;
+  std::cout << "Step 2 : Generated               " << this->total_numbers[1]/count << " End States   in " << this->total_time[1]/count << " ms" << std::endl;
+  std::cout << "Step 3 : Generated & Evaluated   " << this->total_numbers[2]/count << " Trajectories in " << this->total_time[2]/count << " ms" << std::endl;
+  std::cout << "Step 4 : Validated               " << this->total_numbers[3]/count << " Trajectories in " << this->total_time[3]/count << " ms" << std::endl;
+  std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/count << " PolygonPairs in " << this->total_time[4]/count << " ms" << std::endl;
+  std::cout << "Total  : Planning Took           " << this->total_time[5]/count << " ms (or " << 1000/(this->total_time[5]/count) << " Hz)" << std::endl;
 }
 
 FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
@@ -185,7 +186,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
                                                       const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async)
 {
   // Initialize a series of results to be recorded
-  std::vector<size_t> numbers;
+  std::vector<int> numbers;
   std::vector<std::chrono::_V2::system_clock::time_point> timestamps;
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
@@ -204,10 +205,10 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   numbers.emplace_back(trajs_3d.size()*trajs_3d[0].size()*trajs_3d[0][0].size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
-  size_t num_iter = 0;
-  size_t num_trajs_generated = 0;
-  size_t num_trajs_validated = 0;
-  size_t num_collision_checks = 0;
+  int num_iter = 0;
+  int num_trajs_generated = 0;
+  int num_trajs_validated = 0;
+  int num_collision_checks = 0;
 
   FrenetPath best_traj;
   bool best_traj_found = false;
@@ -398,7 +399,7 @@ bool FrenetOptimalTrajectoryPlanner::findInitGuess(const std::vector<std::vector
   return found;
 }
 
-bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, size_t& num_traj)
+bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj)
 {
   if (trajs[idx(0)][idx(1)][idx(2)].is_used)
   {
@@ -428,7 +429,7 @@ bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::v
   }
 }
 
-Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, size_t& num_traj)
+Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
 {
   const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   const Eigen::Vector3i directions = findDirection(sizes, idx);
@@ -481,7 +482,7 @@ Eigen::Vector3i FrenetOptimalTrajectoryPlanner::findDirection(const Eigen::Vecto
   return directions;
 }
 
-double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, size_t& num_traj)
+double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
 {
   const int i = idx(0);  // width dimension
   const int j = idx(1);  // speed dimension
@@ -594,28 +595,28 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
     if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
     {
       passed = false;
-      std::cout << "Condition 0: Contains ilegal values" << std::endl;
+      // std::cout << "Condition 0: Contains ilegal values" << std::endl;
       break;
     }
     else if (traj.s_d[i] > settings_.max_speed)
     {
       passed = false;
-      std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
+      // std::cout << "Condition 1: Exceeded Max Speed" << std::endl;
       break;
     }
     else if (traj.s_dd[i] > settings_.max_accel || traj.s_dd[i] < settings_.max_decel)
     {
       passed = false;
-      std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
+      // std::cout << "Condition 2: Exceeded Max Acceleration" << std::endl;
       break;
     }
-    else if (std::abs(traj.c[i]) > settings_.max_curvature)
-    {
-      passed = false;
-      std::cout << "Exceeded max curvature = " << settings_.max_curvature
-                << ". Curr curvature = " << (traj.c[i]) << std::endl;
-      break;
-    }
+    // else if (std::abs(traj.c[i]) > settings_.max_curvature)
+    // {
+    //   passed = false;
+    //   std::cout << "Exceeded max curvature = " << settings_.max_curvature
+    //             << ". Curr curvature = " << (traj.c[i]) << std::endl;
+    //   break;
+    // }
   }
 
   traj.constraint_passed = passed;
@@ -642,7 +643,7 @@ std::vector<Path> FrenetOptimalTrajectoryPlanner::predictTrajectories(const auto
     obstacle_traj.v.push_back(v);
     
     const int steps = settings_.max_t/settings_.tick_t;
-    for (size_t i = 0; i < steps; i++)
+    for (int i = 0; i < steps; i++)
     {
       obstacle_traj.x.push_back(obstacle_traj.x.back() + v*settings_.tick_t*std::cos(yaw));
       obstacle_traj.x.push_back(obstacle_traj.y.back() + v*settings_.tick_t*std::sin(yaw));
@@ -658,7 +659,7 @@ std::vector<Path> FrenetOptimalTrajectoryPlanner::predictTrajectories(const auto
 
 bool FrenetOptimalTrajectoryPlanner::checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
                                                      const autoware_msgs::DetectedObjectArray& obstacles, 
-                                                     const bool use_async, size_t& num_checks)
+                                                     const bool use_async, int& num_checks)
 {
   if (use_async)
   {
