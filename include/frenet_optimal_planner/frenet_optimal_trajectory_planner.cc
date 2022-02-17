@@ -194,6 +194,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   // Clear the canidate trajectories from the last planning cycle
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> empty;
   std::swap(candidate_trajs_, empty);
+  all_trajs_.clear();
 
   // Initialize start state and obstacle trajectories
   start_state_ = start_state;
