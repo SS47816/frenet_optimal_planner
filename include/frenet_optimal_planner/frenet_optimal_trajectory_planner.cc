@@ -331,7 +331,7 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
     {
       std::vector<FrenetPath> trajs_1d;
       const double v = settings_.lowest_speed + j*delta_v;
-      const double speed_cost = pow(settings_.highest_speed - v, 2) + 0.5*pow(current_speed - v, 2);
+      const double speed_cost = pow((settings_.highest_speed - v)/settings_.highest_speed, 2);
 
       // Sampling on the time dimension
       const double delta_t = (settings_.max_t - settings_.min_t)/(settings_.num_t - 1);
@@ -350,7 +350,7 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
         end_state.d_dd = 0.0;
 
         // Planning Horizon cost (encourage longer planning horizon)
-        const double time_cost = (1 - end_state.T/settings_.max_t);
+        const double time_cost = (1 - (end_state.T - settings_.min_t)/(settings_.max_t - settings_.min_t));
         
         // fixed cost terms
         const double fix_cost = settings_.k_lat * settings_.k_diff*lat_cost 
