@@ -69,6 +69,7 @@ class FrenetOptimalTrajectoryPlanner
     double k_lat;               // lateral overall cost weight
     double k_lon;               // longitudinal overall cost weight
     double k_obstacle;          // obstacle cost weight
+    double k_heuristic;         // heuristic cost weight
 
     // Collision Parameters
     double safety_margin_lon;   // lon safety margin [ratio]
@@ -116,10 +117,11 @@ class FrenetOptimalTrajectoryPlanner
   std::vector<FrenetPath> frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& frenet_state, const int lane_id,
                                                 const double left_width, const double right_width, const double current_speed, 
                                                 const autoware_msgs::DetectedObjectArray& obstacles, 
-                                                const bool check_collision, const bool use_async);
+                                                const bool check_collision, const bool use_async, const bool use_heuristic);
   
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
   std::vector<FrenetPath> all_trajs_;
+  FrenetPath best_traj_;
 
  private:
   Setting settings_;
@@ -127,11 +129,11 @@ class FrenetOptimalTrajectoryPlanner
   FrenetState start_state_;
   SATCollisionChecker sat_collision_checker_;
   
-  /* Private Functions */
   std::pair<std::vector<std::vector<std::vector<FrenetPath>>>, Eigen::Vector3i> 
-  sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed);
-  bool findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx);
+  sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed, const bool use_heuristic);
   // Find the best init guess based on end states
+  bool findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx);
+  // Explore trajectories
   bool findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj);
   Eigen::Vector3d findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj);
   Eigen::Vector3i findDirection(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx);

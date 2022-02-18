@@ -12,17 +12,17 @@ namespace fop
 {
 
 FrenetPath::FrenetPath() {}
-FrenetPath::FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double hur_cost)
+FrenetPath::FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost)
  : 
   lane_id(lane_id), 
   is_generated(false),
-  is_used(false),
+  is_searched(false),
   constraint_passed(false),
   collision_passed(false),
   fix_cost(fix_cost),
-  hur_cost(hur_cost),
-  est_cost(fix_cost + hur_cost),
   dyn_cost(0.0),
+  heu_cost(heu_cost),
+  est_cost(fix_cost + heu_cost),
   final_cost(0.0),
   end_state(end_state)
 {}

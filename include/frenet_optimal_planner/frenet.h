@@ -45,7 +45,7 @@ class FrenetPath
  public:
   // Constructor
   FrenetPath();
-  FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double hur_cost);
+  FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost);
 
   friend bool operator < (const FrenetPath& lhs, const FrenetPath& rhs);
   friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
@@ -53,18 +53,18 @@ class FrenetPath
   // flags
   Eigen::Vector3i idx;
   int lane_id;
-  bool is_used;       // label if this trajectory has been searched before
   bool is_generated;  // label if this trajectory has been generated or not
+  bool is_searched;   // label if this trajectory has been searched before
   // checks
   bool constraint_passed;
   bool collision_passed;
   // costs
   double fix_cost;    // fixed cost term
-  double hur_cost;    // huristic cost term
-  double est_cost;    // cost term estimated before generation (fix_cost + hur_cost)
   double dyn_cost;    // cost terms to be determined after generation
+  double heu_cost;    // heuristic cost term
+  double est_cost;    // cost term estimated before generation (fix_cost + heu_cost)
   double final_cost;  // final cost for a generated trajectory
-  
+
   // time list
   std::vector<double> t;
   // longitudinal

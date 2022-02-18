@@ -40,6 +40,7 @@ double RIGHT_LANE_WIDTH;      // Maximum right road width [m]
 
 bool CHECK_COLLISION;
 bool USE_ASYNC;
+bool USE_HEURISTIC;
 
 bool SETTINGS_UPDATED = false;
 
@@ -49,6 +50,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   // General Settings
   CHECK_COLLISION = config.check_collision;
   USE_ASYNC = config.use_async;
+  USE_HEURISTIC = config.use_heuristic;
   SETTINGS.tick_t = config.tick_t;
 
   // Sampling parameters (lateral)
@@ -84,6 +86,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_lat = config.k_lat;
   SETTINGS.k_lon = config.k_lon;
   SETTINGS.k_obstacle = config.k_obstacle;
+  SETTINGS.k_heuristic = config.k_heuristic;
   // Safety constraints
   SETTINGS.safety_margin_lon = config.safety_margin_lon;
   SETTINGS.safety_margin_lat = config.safety_margin_lat;
@@ -240,7 +243,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   // Get the planning result 
   std::vector<FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
-                                                                                      *obstacles, CHECK_COLLISION, USE_ASYNC);
+                                                                                      *obstacles, CHECK_COLLISION, USE_ASYNC, USE_HEURISTIC);
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
   publishCandidateTrajs(frenet_planner_.all_trajs_);
   if (best_traj_list.empty())
