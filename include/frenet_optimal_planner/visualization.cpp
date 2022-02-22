@@ -181,7 +181,7 @@ public:
 
     marker.lifetime = infinite_duration ? ros::Duration() : ros::Duration(MARKER_DISPLAY_DURATION);
     marker.header.frame_id = "map";
-    // marker.header.stamp = ros::Time::now();
+    marker.header.stamp = ros::Time::now();
     marker.type = marker_type;
     marker.action = visualization_msgs::Marker::ADD;
     marker.ns = ns;
@@ -376,8 +376,8 @@ public:
     for (int i = 0; i < traj.x.size(); i++)
     {
       geometry_msgs::Point tmp_point;
-      if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
-        break;
+      // if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
+      //   break;
       tmp_point.x = traj.x[i];
       tmp_point.y = traj.y[i];
       tmp_point.z = z_map + 2.0*std::hypot(traj.s_d[i], traj.d_d[i])/max_speed;
