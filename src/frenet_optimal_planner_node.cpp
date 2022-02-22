@@ -390,7 +390,7 @@ void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
 void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs)
 {
   visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, Vehicle::max_speed());
-
+  
   candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
 
@@ -513,6 +513,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
 // Update the vehicle start state in frenet
 void FrenetOptimalPlannerNode::updateStartState()
 {
+  // Ensure the reference spline exists
   if (local_lane_.points.empty())
   {
     return;

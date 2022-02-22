@@ -238,8 +238,8 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     bool converged = false;
     while (!converged)
     {
-      std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-      std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+      // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+      // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
 
       // Perform a search for the real best trajectory using gradients
       converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);

@@ -181,7 +181,7 @@ public:
 
     marker.lifetime = infinite_duration ? ros::Duration() : ros::Duration(MARKER_DISPLAY_DURATION);
     marker.header.frame_id = "map";
-    marker.header.stamp = ros::Time::now();
+    // marker.header.stamp = ros::Time::now();
     marker.type = marker_type;
     marker.action = visualization_msgs::Marker::ADD;
     marker.ns = ns;
@@ -373,7 +373,7 @@ public:
   {
     visualization_msgs::Marker traj_marker = initializeMarker(marker_id, ns, color, CANDIDATE_PATH_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
 
-    for (int i = 0; i < traj.c.size(); i++)
+    for (int i = 0; i < traj.x.size(); i++)
     {
       geometry_msgs::Point tmp_point;
       if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
@@ -588,8 +588,7 @@ public:
     std::vector<geometry_msgs::Point32> right_bound;
     std::vector<geometry_msgs::Point32> left_right_points;
 
-    left_right_points =
-        getBothSidesPoints(current_state.x, current_state.y, current_state.yaw, vehicle_width, safety_margin);
+    left_right_points = getBothSidesPoints(current_state.x, current_state.y, current_state.yaw, vehicle_width, safety_margin);
     left_bound.push_back(left_right_points.at(0));
     right_bound.push_back(left_right_points.at(1));
 
