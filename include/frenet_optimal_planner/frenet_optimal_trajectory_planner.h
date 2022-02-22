@@ -93,15 +93,15 @@ class FrenetOptimalTrajectoryPlanner
     std::vector<double> time_max;
     std::vector<double> total_time;
 
-    double total_cost;
+    double total_fix_cost, total_dyn_cost;
     double total_dist;
-    std::vector<double> cost_history;
-    std::vector<double> dist_history;
+    // std::vector<double> cost_history;
+    // std::vector<double> dist_history;
 
     TestResult();
     TestResult(const int length);
     void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                     const double cost, const double dist);
+                     const double fix_cost, const double dyn_cost, const double dist);
     void printSummary();
   };
 

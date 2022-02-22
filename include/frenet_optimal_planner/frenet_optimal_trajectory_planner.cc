@@ -11,7 +11,7 @@
 namespace fop
 {
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0)
+FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_cost(0), total_dyn_cost(0), total_dist(0)
 {
   this->numbers = std::vector<int>(5, int(0));
   this->numbers_min = std::vector<int>(5, int(100000));
@@ -58,7 +58,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : lengt
 }
 
 void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                                                             const double cost, const double dist)
+                                                             const double fix_cost, const double dyn_cost, const double dist)
 {
   if (numbers.size() != this->length || timestamps.size() != this->length+1)
   {
@@ -98,10 +98,9 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<i
   std::transform(this->total_time.begin(), this->total_time.end(), this->time.begin(), this->total_time.begin(), std::plus<double>());
 
   // Add the current optimal cost & distance from previous best
-  total_cost += cost;
+  total_fix_cost += fix_cost;
+  total_dyn_cost += dyn_cost;
   total_dist += dist;
-  cost_history.emplace_back(cost);
-  dist_history.emplace_back(dist);
 }
 
 void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
@@ -116,8 +115,6 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Step 4 : Validated               " << this->numbers[3] << " Trajectories in " << this->time[3] << " ms" << std::endl;
   std::cout << "Step 5 : Checked Collisions for  " << this->numbers[4] << " PolygonPairs in " << this->time[4] << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->time[5] << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
-  // std::cout << "Cost   : Optimal Candiate's Cost " << this->cost_history.back() << std::endl;
-  // std::cout << "Dist   : Distance to History Best" << this->dist_history.back() << std::endl;
 
   // Print Summary for Best Case performance
   std::cout << " " << std::endl;
@@ -148,7 +145,9 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Step 4 : Validated               " << this->total_numbers[3]/count << " Trajectories in " << this->total_time[3]/count << " ms" << std::endl;
   std::cout << "Step 5 : Checked Collisions for  " << this->total_numbers[4]/count << " PolygonPairs in " << this->total_time[4]/count << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->total_time[5]/count << " ms (or " << 1000/(this->total_time[5]/count) << " Hz)" << std::endl;
-  std::cout << "Cost   : Optimal Candiate's Cost " << this->total_cost/count << std::endl;
+  std::cout << "Cost   : Optimal's Fix Cost      " << this->total_fix_cost/count << std::endl;
+  std::cout << "Cost   : Optimal's Dyn Cost      " << this->total_dyn_cost/count << std::endl;
+  std::cout << "Cost   : Optimal's Total Cost    " << (this->total_fix_cost + this->total_dyn_cost)/count << std::endl;
   std::cout << "Dist   : Distance to History Best" << this->total_dist/count << std::endl;
 }
 
@@ -299,14 +298,21 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     }
   }
 
-  double cost = 0.0;
+  double fix_cost = 0.0;
+  double dyn_cost = 0.0;
   double dist = 0.0;
   if (best_traj_found)
   {
-    cost = best_traj_.final_cost;
+    fix_cost = best_traj_.fix_cost;
+    dyn_cost = best_traj_.dyn_cost;
+    std::cout << fix_cost << std::endl;
+    std::cout << dyn_cost << std::endl;
+
     for (int i = 0; i < 3; i++)
     {
-      dist += std::pow(best_traj_.idx(i) - prev_best_idx_(i),2);
+      const double l = best_traj_.idx(i) - prev_best_idx_(i);
+      std::cout << l << std::endl;
+      dist += std::pow(l, 2);
     }
 
     prev_best_traj_ = best_traj_;
@@ -318,7 +324,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   numbers.emplace_back(num_collision_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-  test_result_.updateCount(numbers, timestamps, cost, dist);
+  test_result_.updateCount(numbers, timestamps, fix_cost, dyn_cost, dist);
   test_result_.printSummary();
   /* --------------------------------- Construction Zone -------------------------------- */
 
