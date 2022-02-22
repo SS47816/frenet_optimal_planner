@@ -93,9 +93,15 @@ class FrenetOptimalTrajectoryPlanner
     std::vector<double> time_max;
     std::vector<double> total_time;
 
+    double total_cost;
+    double total_dist;
+    std::vector<double> cost_history;
+    std::vector<double> dist_history;
+
     TestResult();
     TestResult(const int length);
-    void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps);
+    void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+                     const double cost, const double dist);
     void printSummary();
   };
 
@@ -121,7 +127,8 @@ class FrenetOptimalTrajectoryPlanner
   
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
   std::vector<FrenetPath> all_trajs_;
-  FrenetPath best_traj_;
+  FrenetPath best_traj_, prev_best_traj_;
+  Eigen::Vector3i prev_best_idx_;
 
  private:
   Setting settings_;
@@ -129,8 +136,9 @@ class FrenetOptimalTrajectoryPlanner
   FrenetState start_state_;
   SATCollisionChecker sat_collision_checker_;
   
-  std::pair<std::vector<std::vector<std::vector<FrenetPath>>>, Eigen::Vector3i> 
-  sampleEndStates(const int lane_id, const double left_bound, const double right_bound, const double current_speed, const bool use_heuristic);
+  std::vector<std::vector<std::vector<FrenetPath>>> sampleEndStates(const int lane_id, const double left_bound, 
+                                                                    const double right_bound, const double current_speed, 
+                                                                    const bool use_heuristic);
   // Find the best init guess based on end states
   bool findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx);
   // Explore trajectories
