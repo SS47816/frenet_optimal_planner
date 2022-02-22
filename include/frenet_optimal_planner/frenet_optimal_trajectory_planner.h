@@ -92,14 +92,14 @@ class FrenetOptimalTrajectoryPlanner
     std::vector<double> time;
     std::vector<double> total_time;
 
-    double total_cost;
+    double total_fix_cost, total_dyn_cost;
     double total_dist;
-    std::vector<double> cost_history;
-    std::vector<double> dist_history;
+    // std::vector<double> cost_history;
+    // std::vector<double> dist_history;
 
     TestResult();
     void updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                     const double cost, const double dist);
+                     const double fix_cost, const double dyn_cost, const double dist);
     void printSummary();
   };
 
@@ -123,8 +123,8 @@ class FrenetOptimalTrajectoryPlanner
                                                      const double left_width, const double right_width, const double current_speed, 
                                                      const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
   
-  std::shared_ptr<std::vector<fop::FrenetPath>> candidate_trajs_;
-  std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> trajs_queue_;
+  std::shared_ptr<std::vector<fop::FrenetPath>> all_trajs_;
+  std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_;
   FrenetPath best_traj_, prev_best_traj_;
   Eigen::Vector3i prev_best_idx_;
 

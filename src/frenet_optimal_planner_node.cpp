@@ -251,7 +251,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
 
   // Publish the best trajs
   publishRefSpline(ref_spline_);
-  publishCandidateTrajs(*frenet_planner_.candidate_trajs_);
+  publishCandidateTrajs(*frenet_planner_.all_trajs_);
   publishCurrTraj(curr_trajectory_);
   publishNextTraj(best_traj);
 
