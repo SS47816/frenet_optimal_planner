@@ -46,7 +46,7 @@ bool SETTINGS_UPDATED = false;
 // Dynamic parameter server callback function
 void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
 {
-  // General Settings
+// General Settings
   CHECK_COLLISION = config.check_collision;
   USE_ASYNC = config.use_async;
   SETTINGS.tick_t = config.tick_t;
@@ -62,26 +62,34 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.min_t = config.min_t;
   SETTINGS.num_t = config.num_t;
   
-  SETTINGS.highest_speed = fop::kph2mps(config.highest_speed);
-  SETTINGS.lowest_speed = fop::kph2mps(config.lowest_speed);
+  SETTINGS.highest_speed = kph2mps(config.highest_speed);
+  SETTINGS.lowest_speed = kph2mps(config.lowest_speed);
   SETTINGS.num_speed = config.num_speed;
   // Constraints
-  SETTINGS.max_speed = fop::Vehicle::max_speed();
-  SETTINGS.max_accel = fop::Vehicle::max_acceleration();
-  SETTINGS.max_decel = fop::Vehicle::max_deceleration();
-  SETTINGS.max_curvature = fop::Vehicle::max_curvature_front();
-  // SETTINGS.steering_angle_rate = fop::Vehicle::max_steering_rate();
+  // SETTINGS.max_speed = Vehicle::max_speed();
+  // SETTINGS.max_accel = Vehicle::max_acceleration();
+  // SETTINGS.max_decel = Vehicle::max_deceleration();
+  // SETTINGS.max_curvature = Vehicle::max_curvature_front();
+  // SETTINGS.steering_angle_rate = Vehicle::max_steering_rate();
+  SETTINGS.max_speed = kph2mps(config.max_speed);
+  SETTINGS.max_accel = config.max_acceleration;
+  SETTINGS.max_decel = -config.max_deceleration;
+  SETTINGS.max_curvature = config.max_curvature;
+  SETTINGS.max_jerk_s = config.max_jerk_lon;
+  SETTINGS.max_jerk_d = config.max_jerk_lat;
   // Cost Weights
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
   SETTINGS.k_diff = config.k_diff;
-  SETTINGS.k_lat = config.k_lateral;
-  SETTINGS.k_lon = config.k_longitudinal;
+  SETTINGS.k_lat = config.k_lat;
+  SETTINGS.k_lon = config.k_lon;
   SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
-  SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
-  SETTINGS.vehicle_length = fop::Vehicle::bbox_size().x();
-  SETTINGS.soft_safety_margin = config.soft_safety_margin;
+  SETTINGS.safety_margin_lon = config.safety_margin_lon;
+  SETTINGS.safety_margin_lat = config.safety_margin_lat;
+  SETTINGS.safety_margin_soft = config.safety_margin_soft;
+  SETTINGS.vehicle_width = Vehicle::bbox_size().y();
+  SETTINGS.vehicle_length = Vehicle::bbox_size().x();
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;

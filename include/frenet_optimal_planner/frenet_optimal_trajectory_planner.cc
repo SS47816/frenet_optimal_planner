@@ -61,6 +61,8 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<s
 
 void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
 {
+  const int count = std::max(1, int(this->count));
+  
   // Print Summary for this iteration
   std::cout << " " << std::endl;
   std::cout << "Summary: This Planning Iteration (iteration no." << this->count << ")" << std::endl;
@@ -195,7 +197,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fop::Spline2D& cubic_splin
     cost = best_traj_.final_cost;
     for (int i = 0; i < 3; i++)
     {
-      dist += std::pow(best_traj_.idx(i) - prev_best_idx_(i),2);
+      dist += std::pow(best_traj_.idx(i) - prev_best_idx_(i), 2);
     }
 
     prev_best_traj_ = best_traj_;
@@ -433,24 +435,16 @@ int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fop::FrenetPath>& f
   int num_checks = 0;
   for (auto& traj : frenet_trajs)
   {
-    double max_jerk_s, max_jerk_d = 0.0;
-    for (int i = 0; i < traj.t.size(); i++)
-    {
-      // find the max jerk in this trajectory
-      max_jerk_s = std::max(max_jerk_s, traj.s_ddd[i]);
-      max_jerk_d = std::max(max_jerk_d, traj.d_ddd[i]);
-    }
-
     // calculate jerk costs
     double jerk_s, jerk_d = 0.0;
     double jerk_sqr_s, jerk_sqr_d = 0.0;
     for (int i = 0; i < traj.t.size(); i++)
     {
       // calculate total squared jerks
-      jerk_sqr_s += std::pow(traj.s_ddd[i]/max_jerk_s, 2);
-      jerk_sqr_d += std::pow(traj.d_ddd[i]/max_jerk_d, 2);
-      jerk_s += std::abs(traj.s_ddd[i]/max_jerk_s);
-      jerk_d += std::abs(traj.d_ddd[i]/max_jerk_d);
+      jerk_sqr_s += std::pow(traj.s_ddd.back()/settings_.max_jerk_s, 2);
+      jerk_s += std::abs(traj.s_ddd.back()/settings_.max_jerk_s);
+      jerk_sqr_d += std::pow(traj.d_ddd.back()/settings_.max_jerk_d, 2);
+      jerk_d += std::abs(traj.d_ddd.back()/settings_.max_jerk_d);
     }
 
     const double jerk_cost_s = jerk_sqr_s/jerk_s;

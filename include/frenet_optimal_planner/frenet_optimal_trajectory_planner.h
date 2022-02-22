@@ -62,8 +62,8 @@ class FrenetOptimalTrajectoryPlanner
     double max_accel;           // maximum acceleration [m/ss]
     double max_decel;           // maximum deceleration [m/ss]
     double max_curvature;       // maximum curvature [rad/m]
-    // double max_jerk_s;          // maximum longitudinal jerk [m/s^3]
-    // double max_jerk_d;          // maximum lateral jerk [m/s^3]
+    double max_jerk_s;          // maximum longitudinal jerk [m/s^3]
+    double max_jerk_d;          // maximum lateral jerk [m/s^3]
     // double steering_angle_rate; // [rad/s]
 
     // Cost Weights
@@ -73,9 +73,12 @@ class FrenetOptimalTrajectoryPlanner
     double k_lat;               // lateral overall cost weight
     double k_lon;               // longitudinal overall cost weight
     double k_obstacle;          // obstacle cost weight
+    double k_heuristic;         // heuristic cost weight
 
     // Collision Parameters
-    double soft_safety_margin;  // soft safety margin [m]
+    double safety_margin_lon;   // lon safety margin [ratio]
+    double safety_margin_lat;   // lat safety margin [ratio]
+    double safety_margin_soft;  // soft safety margin [ratio]
     double vehicle_width;       // vehicle width [m]
     double vehicle_length;      // vehicle length [m]
   };
