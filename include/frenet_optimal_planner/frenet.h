@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 
+#include "Eigen/Dense"
 #include "lane.h"
 #include "math_utils.h"
 #include "vehicle_state.h"
@@ -50,12 +51,17 @@ class FrenetPath
   friend bool operator < (const FrenetPath& lhs, const FrenetPath& rhs);
   friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
 
+  Eigen::Vector3i idx;
   int lane_id;
   // checks
   bool constraint_passed;
   bool collision_passed;
   // costs
-  double cd, cs, cf;
+  double fix_cost;    // fixed cost term
+  double dyn_cost;    // cost terms to be determined after generation
+  // double heu_cost;    // heuristic cost term
+  // double est_cost;    // cost term estimated before generation (fix_cost + heu_cost)
+  double final_cost;  // final cost for a generated trajectory
   
   // time list
   std::vector<double> t;

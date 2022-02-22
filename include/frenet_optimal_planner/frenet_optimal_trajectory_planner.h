@@ -70,8 +70,8 @@ class FrenetOptimalTrajectoryPlanner
     double k_jerk;              // jerk cost weight
     double k_time;              // time cost weight
     double k_diff;              // speed and lateral offset cost weight
-    double k_lateral;           // lateral overall cost weight
-    double k_longitudinal;      // longitudinal overall cost weight
+    double k_lat;               // lateral overall cost weight
+    double k_lon;               // longitudinal overall cost weight
     double k_obstacle;          // obstacle cost weight
 
     // Collision Parameters
@@ -89,8 +89,14 @@ class FrenetOptimalTrajectoryPlanner
     std::vector<double> time;
     std::vector<double> total_time;
 
+    double total_cost;
+    double total_dist;
+    std::vector<double> cost_history;
+    std::vector<double> dist_history;
+
     TestResult();
-    void updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps);
+    void updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+                     const double cost, const double dist);
     void printSummary();
   };
 
@@ -116,6 +122,8 @@ class FrenetOptimalTrajectoryPlanner
   
   std::shared_ptr<std::vector<fop::FrenetPath>> candidate_trajs_;
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> trajs_queue_;
+  FrenetPath best_traj_, prev_best_traj_;
+  Eigen::Vector3i prev_best_idx_;
 
 private:
   Setting settings_;

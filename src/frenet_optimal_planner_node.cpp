@@ -75,8 +75,8 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_diff = config.k_time;
   SETTINGS.k_diff = config.k_diff;
-  SETTINGS.k_lateral = config.k_lateral;
-  SETTINGS.k_longitudinal = config.k_longitudinal;
+  SETTINGS.k_lat = config.k_lateral;
+  SETTINGS.k_lon = config.k_longitudinal;
   SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
   SETTINGS.vehicle_width = fop::Vehicle::bbox_size().y();
@@ -610,17 +610,17 @@ fop::FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<fop::Fren
       // keep lane option
       if (best_traj_list[i].lane_id == current_lane || best_traj_list[i].lane_id == 0)
       {
-        if (best_traj_list[i].cf < keep_lane_cost)
+        if (best_traj_list[i].final_cost < keep_lane_cost)
         {
           keep_lane_id = i;
-          keep_lane_cost = best_traj_list[i].cf;
+          keep_lane_cost = best_traj_list[i].final_cost;
         }
       }
       // change lane option
       else
       {
         change_lane_id = i;
-        change_lane_cost = best_traj_list[i].cf;
+        change_lane_cost = best_traj_list[i].final_cost;
       }
     }
   }

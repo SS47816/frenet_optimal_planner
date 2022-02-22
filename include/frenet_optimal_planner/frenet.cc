@@ -13,12 +13,12 @@ namespace fop
 
 bool operator < (const FrenetPath& lhs, const FrenetPath& rhs)
 {
-  return lhs.cf < rhs.cf;
+  return lhs.final_cost < rhs.final_cost;
 }
 
 bool operator > (const FrenetPath& lhs, const FrenetPath& rhs)
 {
-  return lhs.cf > rhs.cf;
+  return lhs.final_cost > rhs.final_cost;
 }
 
 FrenetState getFrenet(const VehicleState& current_state, const Lane& lane)
