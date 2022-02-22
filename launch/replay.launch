@@ -13,6 +13,8 @@
     <remap from="~output/global_path"         to="/planning/mission_planning/global_path" />
   </node> -->
 
+  <param name="/use_sim_time" value="true" />
+
   <!-- Rviz -->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find lgsvl_utils)/rviz/lgsvl.rviz" output="log" respawn="true" />
 
