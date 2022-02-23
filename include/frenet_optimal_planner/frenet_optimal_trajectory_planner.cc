@@ -349,14 +349,15 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
   // Eigen::Vector3i idx;
   
   // Heuristic parameters
-  double max_sqr_dist = 1.0;
-  if (use_heuristic && best_traj_.is_generated) // Add history guess
-  {
-    const int max_i = std::max(prev_best_idx_(0), int(settings_.num_width - prev_best_idx_(0)));
-    const int max_j = std::max(prev_best_idx_(1), int(settings_.num_speed - prev_best_idx_(1)));
-    const int max_k = std::max(prev_best_idx_(2), int(settings_.num_t - prev_best_idx_(2)));
-    max_sqr_dist = std::pow(max_i, 2) + std::pow(max_j, 2) + std::pow(max_k, 2);
-  }
+  const double max_sqr_dist = std::pow(settings_.num_width, 2) + std::pow(settings_.num_speed, 2) + std::pow(settings_.num_t, 2);
+  // double max_sqr_dist = 1.0;
+  // if (use_heuristic && best_traj_.is_generated) // Add history guess
+  // {
+  //   // const int max_i = std::max(prev_best_idx_(0), int(settings_.num_width - prev_best_idx_(0)));
+  //   // const int max_j = std::max(prev_best_idx_(1), int(settings_.num_speed - prev_best_idx_(1)));
+  //   // const int max_k = std::max(prev_best_idx_(2), int(settings_.num_t - prev_best_idx_(2)));
+  //   // max_sqr_dist = std::pow(max_i, 2) + std::pow(max_j, 2) + std::pow(max_k, 2);
+  // }
   
   // Sampling on the lateral direction
   const double delta_width = (left_bound - settings_.center_offset)/((settings_.num_width - 1)/2);
@@ -404,12 +405,11 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
         if (use_heuristic && best_traj_.is_generated) // Add history heuristic
         {
           const double heu_sqr_dist = std::pow(i - prev_best_idx_(0), 2) + std::pow(j - prev_best_idx_(1), 2) + std::pow(k - prev_best_idx_(2), 2);
-          heu_cost += settings_.k_heuristic * heu_sqr_dist/max_sqr_dist;
+          heu_cost = settings_.k_heuristic * heu_sqr_dist/max_sqr_dist;
         }
 
         // total estimated cost
-        double est_cost = fix_cost + heu_cost;
-
+        // double est_cost = fix_cost + heu_cost;
         // find the index of the traj with the lowest estimated cost
         // if (est_cost < min_cost)
         // {
