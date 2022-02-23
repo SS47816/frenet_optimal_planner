@@ -34,7 +34,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_c
   this->total_time.shrink_to_fit();
 }
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0)
+FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0), total_fix_cost(0), total_dyn_cost(0), total_dist(0)
 {
   this->numbers = std::vector<int>(length, int(0));
   this->numbers_min = std::vector<int>(length, int(100000));
@@ -393,7 +393,7 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
         end_state.d_dd = 0.0;
 
         // Planning Horizon cost (encourage longer planning horizon)
-        const double time_cost = settings_.k_time*(1 - (end_state.T - settings_.min_t)/(settings_.max_t - settings_.min_t));
+        const double time_cost = settings_.k_time*(1.0 - (end_state.T - settings_.min_t)/(settings_.max_t - settings_.min_t));
         
         // fixed cost terms
         const double fix_cost = settings_.k_lat * lat_cost 
