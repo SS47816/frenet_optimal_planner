@@ -618,18 +618,18 @@ Visualization Manager:
     - Class: rviz/Group
       Displays:
         - Class: rviz/MarkerArray
-          Enabled: true
+          Enabled: false
           Marker Topic: /local_planner/candidate_paths
           Name: Candidate Trajectories
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Alpha: 1
           Buffer Length: 1
           Class: rviz/Path
           Color: 138; 226; 52
-          Enabled: true
+          Enabled: false
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
           Length: 0.30000001192092896
@@ -647,12 +647,12 @@ Visualization Manager:
           Shaft Length: 0.10000000149011612
           Topic: /local_planner/ref_path
           Unreliable: false
-          Value: true
+          Value: false
         - Alpha: 1
           Buffer Length: 1
           Class: rviz/Path
           Color: 52; 101; 164
-          Enabled: true
+          Enabled: false
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
           Length: 0.30000001192092896
@@ -670,12 +670,12 @@ Visualization Manager:
           Shaft Length: 0.10000000149011612
           Topic: /local_planner/current_trajectory
           Unreliable: false
-          Value: true
+          Value: false
         - Alpha: 1
           Buffer Length: 1
           Class: rviz/Path
           Color: 239; 41; 41
-          Enabled: true
+          Enabled: false
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
           Length: 0.30000001192092896
@@ -693,11 +693,19 @@ Visualization Manager:
           Shaft Length: 0.10000000149011612
           Topic: /local_planner/next_trajectory
           Unreliable: false
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /local_planner/final_trajectory
+          Name: Sampling Space
+          Namespaces:
+            final: true
+          Queue Size: 100
           Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /local_planner/final_trajectory
-          Name: Marker
+          Name: Final Trajectory
           Namespaces:
             final: true
           Queue Size: 100
@@ -749,16 +757,16 @@ Visualization Manager:
       Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9257966876029968
+      Pitch: 0.9307966828346252
       Point towards: arbitrary
       Position:
-        X: -25.390764236450195
-        Y: -0.9297869205474854
-        Z: 76.88895416259766
+        X: -28.276193618774414
+        Y: -0.8865025043487549
+        Z: 80.72464752197266
       Roll: 0
       Target Frame: <Fixed Frame>
       Value: FrameAligned (rviz)
-      Yaw: -0.015000001527369022
+      Yaw: -0.015000003390014172
     Saved: ~
 Window Geometry:
   Displays:

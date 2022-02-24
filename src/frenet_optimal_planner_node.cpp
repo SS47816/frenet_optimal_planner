@@ -396,7 +396,6 @@ void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const Fr
   for (int i = 0; i < next_traj.x.size(); i++)
   {
     // double wp_seperation;
-
     // Check if the separation between adjacent waypoint are permitted
     // if (!current_traj.x.empty() && !current_traj.y.empty())
     // {
@@ -412,14 +411,16 @@ void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const Fr
     // {
     //   break;
     // }
-
-    vis_traj.x.push_back(next_traj.x[i]);
-    vis_traj.y.push_back(next_traj.y[i]);
-    vis_traj.yaw.push_back(next_traj.yaw[i]);
+    if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]))
+    {
+      vis_traj.x.push_back(next_traj.x[i]);
+      vis_traj.y.push_back(next_traj.y[i]);
+      vis_traj.yaw.push_back(next_traj.yaw[i]);
+    }
   }
 
-  const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(vis_traj, SETTINGS.vehicle_width, SETTINGS.safety_margin_lat,
-                                                                                               current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.3);
+  const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
+    vis_traj, SETTINGS.vehicle_width, 0.0, current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.2);
   traj_marker_pub.publish(output_traj_marker);
 }
 
@@ -732,39 +733,38 @@ void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int
   if (curr_trajectory_.x.size() <= traj_min_size)
   {
     diff = std::min(traj_max_size - curr_trajectory_.x.size(), next_traj.x.size());
-    // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Current Size: " << traj_max_size << " Diff: " << diff
-    //           << " Next Path Size: " << next_traj.x.size() << std::endl;
   }
 
   // Concatenate the best path to the output path
   for (size_t i = 0; i < diff; i++)
   {
-    double wp_seperation;
+    // double wp_seperation;
 
-    // Check if the separation between adjacent waypoint are permitted
-    if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
+    // // Check if the separation between adjacent waypoint are permitted
+    // if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
+    // {
+    //   wp_seperation = distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
+    // }
+    // else
+    // {
+    //   wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
+    // }
+
+    // // If the separation is too big/small, reject point onward
+    // if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
+    // {
+    //   ROS_WARN("Local Planner: waypoint out of bound, rejected");
+    //   regenerate_flag_ = true;
+    //   break;
+    // }
+    if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]) && 
+        std::isnormal(next_traj.s_d[i]) && std::isnormal(next_traj.d_d[i]))
     {
-      wp_seperation = distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
+      curr_trajectory_.x.push_back(next_traj.x[i]);
+      curr_trajectory_.y.push_back(next_traj.y[i]);
+      curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
+      curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
     }
-    else
-    {
-      wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
-    }
-
-    // If the separation is too big/small, reject point onward
-    if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
-    {
-      ROS_WARN("Local Planner: waypoint out of bound, rejected");
-      regenerate_flag_ = true;
-      break;
-    }
-
-    curr_trajectory_.x.push_back(next_traj.x[i]);
-    curr_trajectory_.y.push_back(next_traj.y[i]);
-    curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
-    curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
-
-    // std::cout << "Concatenate round " << i << ": Output Path Size: " << curr_trajectory_.x.size() << std::endl;
   }
 
   // Calculate control outputs and Erase the point that have been executed
