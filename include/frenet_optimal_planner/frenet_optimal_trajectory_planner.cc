@@ -148,7 +148,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Cost   : Optimal's Fix Cost      " << this->total_fix_cost/count << std::endl;
   std::cout << "Cost   : Optimal's Dyn Cost      " << this->total_dyn_cost/count << std::endl;
   std::cout << "Cost   : Optimal's Total Cost    " << (this->total_fix_cost + this->total_dyn_cost)/count << std::endl;
-  std::cout << "Dist   : Distance to History Best" << this->total_dist/count << std::endl;
+  std::cout << "Dist   : Distance to History Best" << this->total_dist << std::endl;
 }
 
 FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
@@ -307,9 +307,10 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     dyn_cost = best_traj_.dyn_cost;
     for (int i = 0; i < 3; i++)
     {
-      if (prev_best_traj_.idx(i) >= 0 && best_traj_.idx(i) >= 0)
+      const int l = std::abs(prev_best_traj_.idx(i) - best_traj_.idx(i));
+      if (l <= 100)
       {
-        dist += std::pow(prev_best_traj_.idx(i) - best_traj_.idx(i), 2);
+        dist += std::pow(l, 2);
       }
     }
   }
@@ -324,7 +325,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   /* --------------------------------- Construction Zone -------------------------------- */
 
   // Convert the other unused candiates as well (for visualization only)
-  for (auto traj : all_trajs_)
+  for (auto& traj : all_trajs_)
   {
     convertToGlobalFrame(traj, cubic_spline);
   }
