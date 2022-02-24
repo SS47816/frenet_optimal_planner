@@ -94,14 +94,14 @@ class FrenetOptimalTrajectoryPlanner
     std::vector<double> total_time;
 
     double total_fix_cost, total_dyn_cost;
-    double total_dist;
+    int total_dist;
     // std::vector<double> cost_history;
     // std::vector<double> dist_history;
 
     TestResult();
     TestResult(const int length);
     void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                     const double fix_cost, const double dyn_cost, const double dist);
+                     const double fix_cost, const double dyn_cost, const int dist);
     void printSummary();
   };
 
@@ -128,7 +128,7 @@ class FrenetOptimalTrajectoryPlanner
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
   std::vector<FrenetPath> all_trajs_;
   FrenetPath best_traj_, prev_best_traj_;
-  Eigen::Vector3i prev_best_idx_;
+  // Eigen::Vector3i prev_best_idx_;
 
  private:
   Setting settings_;

@@ -11,7 +11,7 @@
 namespace fop
 {
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_cost(0), total_dyn_cost(0), total_dist(0)
+FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
 {
   this->numbers = std::vector<int>(5, int(0));
   this->numbers_min = std::vector<int>(5, int(100000));
@@ -34,17 +34,17 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_c
   this->total_time.shrink_to_fit();
 }
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0), total_fix_cost(0), total_dyn_cost(0), total_dist(0)
+FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
 {
   this->numbers = std::vector<int>(length, int(0));
   this->numbers_min = std::vector<int>(length, int(100000));
   this->numbers_max = std::vector<int>(length, int(0));
   this->total_numbers = std::vector<int>(length, int(0));
 
-  this->time = std::vector<double>(length+1, double(0));
+  this->time = std::vector<double>(length+1, double(0.0));
   this->time_min = std::vector<double>(length+1, double(100000));
-  this->time_max = std::vector<double>(length+1, double(0));
-  this->total_time = std::vector<double>(length+1, double(0));
+  this->time_max = std::vector<double>(length+1, double(0.0));
+  this->total_time = std::vector<double>(length+1, double(0.0));
 
   this->numbers.shrink_to_fit();
   this->numbers_min.shrink_to_fit();
@@ -58,7 +58,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : lengt
 }
 
 void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                                                             const double fix_cost, const double dyn_cost, const double dist)
+                                                             const double fix_cost, const double dyn_cost, const int dist)
 {
   if (numbers.size() != this->length || timestamps.size() != this->length+1)
   {
@@ -300,23 +300,18 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
 
   double fix_cost = 0.0;
   double dyn_cost = 0.0;
-  double dist = 0.0;
-  if (best_traj_found)
+  int dist = 0.0;
+  if (best_traj_found && prev_best_traj_.is_generated) // ensure the previous best exists
   {
     fix_cost = best_traj_.fix_cost;
     dyn_cost = best_traj_.dyn_cost;
-    std::cout << fix_cost << std::endl;
-    std::cout << dyn_cost << std::endl;
-
     for (int i = 0; i < 3; i++)
     {
-      const double l = best_traj_.idx(i) - prev_best_idx_(i);
-      std::cout << l << std::endl;
-      dist += std::pow(l, 2);
+      if (prev_best_traj_.idx(i) >= 0 && best_traj_.idx(i) >= 0)
+      {
+        dist += std::pow(prev_best_traj_.idx(i) - best_traj_.idx(i), 2);
+      }
     }
-
-    prev_best_traj_ = best_traj_;
-    prev_best_idx_ = best_traj_.idx;
   }
   
   std::cout << "FOP: Search Done in " << num_iter << " iterations" << std::endl;
@@ -328,8 +323,16 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
   test_result_.printSummary();
   /* --------------------------------- Construction Zone -------------------------------- */
 
+  // Convert the other unused candiates as well (for visualization only)
+  for (auto traj : all_trajs_)
+  {
+    convertToGlobalFrame(traj, cubic_spline);
+  }
+
   if (best_traj_found)
   {
+    prev_best_traj_ = best_traj_;
+
     return std::vector<FrenetPath>{1, best_traj_};
   }
   else
@@ -344,20 +347,9 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
 {
   // list of frenet end states sampled
   std::vector<std::vector<std::vector<FrenetPath>>> trajs_3d;
-
-  // double min_cost = std::numeric_limits<double>::max();
-  // Eigen::Vector3i idx;
   
   // Heuristic parameters
   const double max_sqr_dist = std::pow(settings_.num_width, 2) + std::pow(settings_.num_speed, 2) + std::pow(settings_.num_t, 2);
-  // double max_sqr_dist = 1.0;
-  // if (use_heuristic && best_traj_.is_generated) // Add history guess
-  // {
-  //   // const int max_i = std::max(prev_best_idx_(0), int(settings_.num_width - prev_best_idx_(0)));
-  //   // const int max_j = std::max(prev_best_idx_(1), int(settings_.num_speed - prev_best_idx_(1)));
-  //   // const int max_k = std::max(prev_best_idx_(2), int(settings_.num_t - prev_best_idx_(2)));
-  //   // max_sqr_dist = std::pow(max_i, 2) + std::pow(max_j, 2) + std::pow(max_k, 2);
-  // }
   
   // Sampling on the lateral direction
   const double delta_width = (left_bound - settings_.center_offset)/((settings_.num_width - 1)/2);
@@ -402,22 +394,11 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
         // estimated heuristic cost terms
         // const double heu_cost = settings_.k_lat * settings_.k_diff * pow(start_state_.d - end_state.d, 2);
         double heu_cost = 0.0;
-        if (use_heuristic && best_traj_.is_generated) // Add history heuristic
+        if (use_heuristic && prev_best_traj_.is_generated) // Add history heuristic
         {
-          const double heu_sqr_dist = std::pow(i - prev_best_idx_(0), 2) + std::pow(j - prev_best_idx_(1), 2) + std::pow(k - prev_best_idx_(2), 2);
+          const double heu_sqr_dist = std::pow(i - prev_best_traj_.idx(0), 2) + std::pow(j - prev_best_traj_.idx(1), 2) + std::pow(k - prev_best_traj_.idx(2), 2);
           heu_cost = settings_.k_heuristic * heu_sqr_dist/max_sqr_dist;
         }
-
-        // total estimated cost
-        // double est_cost = fix_cost + heu_cost;
-        // find the index of the traj with the lowest estimated cost
-        // if (est_cost < min_cost)
-        // {
-        //   min_cost = est_cost;
-        //   idx(0) = i;
-        //   idx(1) = j;
-        //   idx(2) = k;
-        // }
 
         trajs_1d.emplace_back(FrenetPath(lane_id, end_state, fix_cost, heu_cost));
       }
@@ -603,8 +584,8 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
     trajs[i][j][k].final_cost = trajs[i][j][k].fix_cost + trajs[i][j][k].dyn_cost;
 
     // Add this trajectory to the candidate queue
-    candidate_trajs_.push(trajs[i][j][k]);
     all_trajs_.push_back(trajs[i][j][k]);
+    candidate_trajs_.push(trajs[i][j][k]);
 
     return trajs[i][j][k].final_cost;
   }
