@@ -86,9 +86,9 @@ class FrenetOptimalTrajectoryPlanner
   class TestResult
   {
    public:
-    size_t count;
-    std::vector<size_t> numbers;
-    std::vector<size_t> total_numbers;
+    int count;
+    std::vector<int> numbers;
+    std::vector<int> total_numbers;
     std::vector<double> time;
     std::vector<double> total_time;
 
@@ -98,7 +98,7 @@ class FrenetOptimalTrajectoryPlanner
     // std::vector<double> dist_history;
 
     TestResult();
-    void updateCount(const std::vector<size_t> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+    void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
                      const double fix_cost, const double dyn_cost, const double dist);
     void printSummary();
   };
@@ -147,7 +147,7 @@ private:
   // Check for collisions and calculate obstacle cost
   std::vector<Path> predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
   bool checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
-                       const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async, size_t& num_checks);
+                       const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async, int& num_checks);
   std::pair<bool, int> checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
                                           const autoware_msgs::DetectedObjectArray& obstacles, const double margin_lon, const double margin_lat);
 };
