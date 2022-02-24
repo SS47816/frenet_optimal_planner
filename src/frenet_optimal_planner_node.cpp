@@ -80,19 +80,19 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.max_jerk_s = config.max_jerk_lon;
   SETTINGS.max_jerk_d = config.max_jerk_lat;
   // Cost Weights
-  SETTINGS.k_jerk = config.k_jerk;
-  SETTINGS.k_diff = config.k_time;
+   SETTINGS.k_heuristic = config.k_heuristic;
   SETTINGS.k_diff = config.k_diff;
+  SETTINGS.k_time = config.k_time;
+  SETTINGS.k_jerk = config.k_jerk;
   SETTINGS.k_lat = config.k_lat;
   SETTINGS.k_lon = config.k_lon;
-  SETTINGS.k_obstacle = config.k_obstacle;
-  SETTINGS.k_heuristic = config.k_heuristic;
+  // SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
+  SETTINGS.vehicle_length = config.vehicle_length;
+  SETTINGS.vehicle_width = config.vehicle_width;
   SETTINGS.safety_margin_lon = config.safety_margin_lon;
   SETTINGS.safety_margin_lat = config.safety_margin_lat;
   SETTINGS.safety_margin_soft = config.safety_margin_soft;
-  SETTINGS.vehicle_width = Vehicle::bbox_size().y();
-  SETTINGS.vehicle_length = Vehicle::bbox_size().x();
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;
