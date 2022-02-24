@@ -87,6 +87,7 @@ class FrenetOptimalPlannerNode
   Lane local_lane_;                // Selected Waypoints
   Path ref_spline_;                // Reference Spline
   Path curr_trajectory_;           // Output Trajectory
+  Path vis_trajectory_;           // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
 
   // Controllers
@@ -97,12 +98,13 @@ class FrenetOptimalPlannerNode
   ros::Subscriber lane_info_sub;
   ros::Subscriber obstacles_sub;
 
+  ros::Publisher ref_path_pub;
   ros::Publisher curr_traj_pub;
   ros::Publisher next_traj_pub;
-  ros::Publisher ref_path_pub;
-  ros::Publisher vehicle_cmd_pub;
+  ros::Publisher traj_marker_pub;
   ros::Publisher candidate_paths_pub;
   ros::Publisher obstacles_pub;
+  ros::Publisher vehicle_cmd_pub;
 
   // ROS
   ros::NodeHandle nh;
@@ -123,8 +125,9 @@ class FrenetOptimalPlannerNode
   void publishRefSpline(const Path& path);
   void publishCurrTraj(const Path& path);
   void publishNextTraj(const FrenetPath& next_traj);
-  void publishVehicleCmd(const double accel, const double angle);
+  void publishVisTraj(const Path& current_traj, const FrenetPath& next_traj);
   void publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs);
+  void publishVehicleCmd(const double accel, const double angle);
 
   // Planner Helper Functions
   bool feedWaypoints();

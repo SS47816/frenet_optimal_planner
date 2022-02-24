@@ -376,8 +376,11 @@ public:
     for (int i = 0; i < traj.x.size(); i++)
     {
       geometry_msgs::Point tmp_point;
-      // if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]))
-      //   break;
+      if (!std::isnormal(traj.x[i]) || !std::isnormal(traj.y[i]) || 
+          !std::isnormal(traj.s_d[i]) || !std::isnormal(traj.d_d[i]))
+      {
+        break;
+      }
       tmp_point.x = traj.x[i];
       tmp_point.y = traj.y[i];
       tmp_point.z = z_map + 2.0*std::hypot(traj.s_d[i], traj.d_d[i])/max_speed;
@@ -419,10 +422,10 @@ public:
     buggy_prediction_markers = buggyPredictionsToMarkers(buggy_rects, marker_id, "buggy_predicted_positions", GREEN);
 
     front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, current_state,
-                                                          marker_id, "predicted_trajectory/front_axle", GREEN);
+                                                          marker_id, "predicted_trajectory/front_axle", GREEN, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
     rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, current_state,
-                                                         marker_id, "predicted_trajectory/rear_axle", BLUE);
+                                                         marker_id, "predicted_trajectory/rear_axle", BLUE, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
     dynamic_bumper_straight_marker =
         straightBumperToMarker(dynamic_bumper_straight, marker_id, "buggy_prediction_straight", slowdown_mode);
@@ -439,8 +442,8 @@ public:
     return visualization_markers;
   }
 
-  static visualization_msgs::MarkerArray buggyPredictionsToMarkers(
-      const std::vector<geometry_msgs::Polygon> buggy_predicted_rects, int& marker_id, std::string ns, COLOR color)
+  static visualization_msgs::MarkerArray buggyPredictionsToMarkers(const std::vector<geometry_msgs::Polygon> buggy_predicted_rects, 
+                                                                   int& marker_id, std::string ns, COLOR color)
   {
     visualization_msgs::MarkerArray polygons_markers;
 
@@ -579,10 +582,10 @@ public:
 
   static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, double vehicle_width,
                                                                  double safety_margin, VehicleState current_state,
-                                                                 int& marker_id, std::string ns, COLOR color)
+                                                                 int& marker_id, std::string ns, COLOR color, double scale)
   {
-    visualization_msgs::Marker predicted_trajectory_marker = initializeMarker(
-        marker_id, ns, getColor(color), PREDICTED_TRAJECTORY_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
+    visualization_msgs::Marker predicted_trajectory_marker = initializeMarker(marker_id, ns, getColor(color), 
+                                                                              scale, visualization_msgs::Marker::LINE_STRIP);
 
     std::vector<geometry_msgs::Point32> left_bound;
     std::vector<geometry_msgs::Point32> right_bound;
@@ -630,12 +633,12 @@ public:
     // left being positive
     double left_direction = yaw + M_PI / 2.0;
 
-    left_point.x = x + cos(left_direction) * (0.5 * width + margin);
-    left_point.y = y + sin(left_direction) * (0.5 * width + margin);
+    left_point.x = x + cos(left_direction) * (0.5 + margin) * width;
+    left_point.y = y + sin(left_direction) * (0.5 + margin) * width ;
     left_point.z = 0;
 
-    right_point.x = x - cos(left_direction) * (0.5 * width + margin);
-    right_point.y = y - sin(left_direction) * (0.5 * width + margin);
+    right_point.x = x - cos(left_direction) * (0.5 + margin) * width;
+    right_point.y = y - sin(left_direction) * (0.5 + margin) * width;
     right_point.z = 0;
 
     return { left_point, right_point };

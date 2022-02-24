@@ -694,6 +694,14 @@ Visualization Manager:
           Topic: /local_planner/next_trajectory
           Unreliable: false
           Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /local_planner/final_trajectory
+          Name: Marker
+          Namespaces:
+            final: true
+          Queue Size: 100
+          Value: true
         - Class: rviz/MarkerArray
           Enabled: false
           Marker Topic: /local_planner/objects_markers

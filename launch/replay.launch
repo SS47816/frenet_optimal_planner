@@ -17,9 +17,11 @@
     <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>
     <param name="lane_info_topic"               value="planning/mission_planning/global_path"/>
     <!-- Output Topic Names -->
+    <param name="ref_path_topic"                value="local_planner/ref_path"/>
     <param name="curr_traj_topic"               value="local_planner/current_trajectory"/>
     <param name="next_traj_topic"               value="local_planner/next_trajectory"/>
-    <param name="ref_path_topic"                value="local_planner/ref_path"/>
+    <param name="final_traj_topic"              value="local_planner/final_trajectory"/>
+    <param name="candidate_trajs_topic"         value="local_planner/candidate_trajs"/>
     <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
   </node>
 

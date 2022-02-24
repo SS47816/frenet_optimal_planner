@@ -118,6 +118,8 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   std::string ref_path_topic;
   std::string curr_traj_topic;
   std::string next_traj_topic;
+  std::string final_traj_topic;
+  std::string candidate_trajs_topic;
   std::string vehicle_cmd_topic;
 
   ros::NodeHandle private_nh("~");
@@ -128,9 +130,11 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic));
   ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic));
   ROS_ASSERT(private_nh.getParam("obstacles_topic", obstacles_topic));
+  ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
   ROS_ASSERT(private_nh.getParam("curr_traj_topic", curr_traj_topic));
   ROS_ASSERT(private_nh.getParam("next_traj_topic", next_traj_topic));
-  ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
+  ROS_ASSERT(private_nh.getParam("final_traj_topic", final_traj_topic));
+  ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
 
   // Instantiate FrenetOptimalTrajectoryPlanner
@@ -144,7 +148,8 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
   next_traj_pub = nh.advertise<nav_msgs::Path>(next_traj_topic, 1);
-  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("local_planner/candidate_paths", 1);
+  traj_marker_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
+  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
   obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
 
@@ -256,6 +261,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   // Find the best path from the all candidates 
   FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best trajs Selected");
+  publishVisTraj(curr_trajectory_, best_traj);
 
   // Concatenate the best path into output_path
   concatPath(best_traj, TRAJ_MAX_SIZE, TRAJ_MIN_SIZE, WP_MAX_SEP, WP_MIN_SEP);
@@ -383,14 +389,47 @@ void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
   next_traj_pub.publish(curr_trajectory_msg);
 }
 
+void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath& next_traj)
+{
+  int marker_id = 0;
+  Path vis_traj = current_traj;
+  for (int i = 0; i < next_traj.x.size(); i++)
+  {
+    // double wp_seperation;
+
+    // Check if the separation between adjacent waypoint are permitted
+    // if (!current_traj.x.empty() && !current_traj.y.empty())
+    // {
+    //   wp_seperation = distance(current_traj.x.back(), current_traj.y.back(), next_traj.x[i], next_traj.y[i]);
+    // }
+    // else
+    // {
+    //   wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
+    // }
+
+    // // If the separation is too big/small, reject point onward
+    // if (wp_seperation >= WP_MAX_SEP || wp_seperation <= WP_MIN_SEP)
+    // {
+    //   break;
+    // }
+
+    vis_traj.x.push_back(next_traj.x[i]);
+    vis_traj.y.push_back(next_traj.y[i]);
+    vis_traj.yaw.push_back(next_traj.yaw[i]);
+  }
+
+  const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(vis_traj, SETTINGS.vehicle_width, SETTINGS.safety_margin_lat,
+                                                                                               current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.3);
+  traj_marker_pub.publish(output_traj_marker);
+}
+
 /**
  * @brief publish candidate trajs for visualization in rviz
  * 
  */
 void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs)
 {
-  visualization_msgs::MarkerArray candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, Vehicle::max_speed());
-  
+  const auto candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, Vehicle::max_speed());
   candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
 
