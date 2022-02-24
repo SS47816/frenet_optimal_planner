@@ -118,6 +118,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   std::string ref_path_topic;
   std::string curr_traj_topic;
   std::string next_traj_topic;
+  std::string sample_space_topic;
   std::string final_traj_topic;
   std::string candidate_trajs_topic;
   std::string vehicle_cmd_topic;
@@ -133,6 +134,7 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
   ROS_ASSERT(private_nh.getParam("curr_traj_topic", curr_traj_topic));
   ROS_ASSERT(private_nh.getParam("next_traj_topic", next_traj_topic));
+  ROS_ASSERT(private_nh.getParam("sample_space_topic", sample_space_topic));
   ROS_ASSERT(private_nh.getParam("final_traj_topic", final_traj_topic));
   ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
@@ -148,7 +150,8 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
   next_traj_pub = nh.advertise<nav_msgs::Path>(next_traj_topic, 1);
-  traj_marker_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
+  sample_space_pub = nh.advertise<visualization_msgs::Marker>(sample_space_topic, 1);
+  final_traj_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
   candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
   obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
@@ -261,6 +264,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   // Find the best path from the all candidates 
   FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best trajs Selected");
+  publishSampleSpace(ref_spline_);
   publishVisTraj(curr_trajectory_, best_traj);
 
   // Concatenate the best path into output_path
@@ -389,28 +393,20 @@ void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
   next_traj_pub.publish(curr_trajectory_msg);
 }
 
+void FrenetOptimalPlannerNode::publishSampleSpace(const Path& ref_path)
+{
+  int marker_id = 0;
+  const auto sample_space_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
+    ref_path, SETTINGS.vehicle_width, 1.5, current_state_, marker_id, "space", Visualization::COLOR::WHITE, 0.1);
+  sample_space_pub.publish(sample_space_marker);
+}
+
 void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath& next_traj)
 {
   int marker_id = 0;
   Path vis_traj = current_traj;
   for (int i = 0; i < next_traj.x.size(); i++)
   {
-    // double wp_seperation;
-    // Check if the separation between adjacent waypoint are permitted
-    // if (!current_traj.x.empty() && !current_traj.y.empty())
-    // {
-    //   wp_seperation = distance(current_traj.x.back(), current_traj.y.back(), next_traj.x[i], next_traj.y[i]);
-    // }
-    // else
-    // {
-    //   wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
-    // }
-
-    // // If the separation is too big/small, reject point onward
-    // if (wp_seperation >= WP_MAX_SEP || wp_seperation <= WP_MIN_SEP)
-    // {
-    //   break;
-    // }
     if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]))
     {
       vis_traj.x.push_back(next_traj.x[i]);
@@ -420,8 +416,8 @@ void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const Fr
   }
 
   const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
-    vis_traj, SETTINGS.vehicle_width, 0.0, current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.2);
-  traj_marker_pub.publish(output_traj_marker);
+    vis_traj, SETTINGS.vehicle_width, 0.0, current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.15);
+  final_traj_pub.publish(output_traj_marker);
 }
 
 /**

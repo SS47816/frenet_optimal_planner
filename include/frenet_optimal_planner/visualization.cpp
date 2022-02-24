@@ -633,12 +633,12 @@ public:
     // left being positive
     double left_direction = yaw + M_PI / 2.0;
 
-    left_point.x = x + cos(left_direction) * (0.5 + margin) * width;
-    left_point.y = y + sin(left_direction) * (0.5 + margin) * width ;
+    left_point.x = x + cos(left_direction) * (0.5 * width + margin);
+    left_point.y = y + sin(left_direction) * (0.5 * width + margin) ;
     left_point.z = 0;
 
-    right_point.x = x - cos(left_direction) * (0.5 + margin) * width;
-    right_point.y = y - sin(left_direction) * (0.5 + margin) * width;
+    right_point.x = x - cos(left_direction) * (0.5 * width + margin);
+    right_point.y = y - sin(left_direction) * (0.5 * width + margin);
     right_point.z = 0;
 
     return { left_point, right_point };

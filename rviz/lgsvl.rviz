@@ -85,51 +85,19 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        base_link:
-          Value: true
-        camera:
-          Value: true
-        gps:
-          Value: true
-        imu:
-          Value: true
-        lidar_center:
-          Value: true
-        lidar_front:
-          Value: true
-        map:
-          Value: true
-        odom:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          camera:
-            {}
-          gps:
-            {}
-          imu:
-            {}
-          lidar_center:
-            {}
-          lidar_front:
-            {}
-        world:
-          map:
-            odom:
-              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 0.5
       Cell Size: 1
       Class: rviz/Grid
@@ -375,9 +343,7 @@ Visualization Manager:
           Marker Topic: /vector_map
           Name: VectorMap
           Namespaces:
-            signal: true
-            stop_line: true
-            white_line: true
+            {}
           Queue Size: 0
           Value: true
         - Class: rviz/MarkerArray
@@ -389,13 +355,13 @@ Visualization Manager:
           Queue Size: 100
           Value: false
         - Class: rviz/MarkerArray
-          Enabled: false
+          Enabled: true
           Marker Topic: /lanelet2_map_viz
           Name: Lanelet2 Map
           Namespaces:
             {}
           Queue Size: 0
-          Value: false
+          Value: true
       Enabled: true
       Name: Maps
     - Class: rviz/Group
@@ -696,10 +662,10 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /local_planner/final_trajectory
+          Marker Topic: /local_planner/sample_space
           Name: Sampling Space
           Namespaces:
-            final: true
+            space: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -747,26 +713,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/FrameAligned
+      Class: rviz/Orbit
+      Distance: 42.27262496948242
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
-      Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9307966828346252
-      Point towards: arbitrary
-      Position:
-        X: -28.276193618774414
-        Y: -0.8865025043487549
-        Z: 80.72464752197266
-      Roll: 0
+      Pitch: 0.44979748129844666
       Target Frame: <Fixed Frame>
-      Value: FrameAligned (rviz)
-      Yaw: -0.015000003390014172
+      Value: Orbit (rviz)
+      Yaw: 3.125385046005249
     Saved: ~
 Window Geometry:
   Displays:
