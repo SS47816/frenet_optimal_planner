@@ -421,10 +421,10 @@ public:
 
     buggy_prediction_markers = buggyPredictionsToMarkers(buggy_rects, marker_id, "buggy_predicted_positions", GREEN);
 
-    front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, current_state, true,
+    front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, 0.0, current_state, true,
                                                           marker_id, "predicted_trajectory/front_axle", GREEN, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
-    rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, current_state, true,
+    rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, 0.0, current_state, true,
                                                          marker_id, "predicted_trajectory/rear_axle", BLUE, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
     dynamic_bumper_straight_marker =
@@ -580,8 +580,8 @@ public:
     return label_markers;
   }
 
-  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, double vehicle_width, double safety_margin, 
-                                                                 const VehicleState current_state, const bool use_current_state,
+  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, const double vehicle_width, const double safety_margin, 
+                                                                 const double z, const VehicleState current_state, const bool use_current_state,
                                                                  int& marker_id, const std::string ns, const COLOR color, const double scale)
   {
     visualization_msgs::Marker predicted_trajectory_marker = initializeMarker(marker_id, ns, getColor(color), 
@@ -593,14 +593,14 @@ public:
 
     if (use_current_state)
     {
-      left_right_points = getBothSidesPoints(current_state.x, current_state.y, current_state.yaw, vehicle_width, safety_margin);
+      left_right_points = getBothSidesPoints(current_state.x, current_state.y, z, current_state.yaw, vehicle_width, safety_margin);
       left_bound.push_back(left_right_points.at(0));
       right_bound.push_back(left_right_points.at(1));
     }
     
     for (int i = 0; i < traj.x.size(); i++)
     {
-      left_right_points = getBothSidesPoints(traj.x[i], traj.y[i], traj.yaw[i], vehicle_width, safety_margin);
+      left_right_points = getBothSidesPoints(traj.x[i], traj.y[i], z, traj.yaw[i], vehicle_width, safety_margin);
       left_bound.push_back(left_right_points.at(0));
       right_bound.push_back(left_right_points.at(1));
     }
@@ -628,8 +628,8 @@ public:
     return predicted_trajectory_marker;
   }
 
-  static std::vector<geometry_msgs::Point32> getBothSidesPoints(double x, double y, double yaw, double width,
-                                                                double margin)
+  static std::vector<geometry_msgs::Point32> getBothSidesPoints(double x, double y, double z, double yaw, 
+                                                                double width, double margin)
   {
     geometry_msgs::Point32 left_point, right_point;
 
@@ -638,11 +638,11 @@ public:
 
     left_point.x = x + cos(left_direction) * (0.5 * width + margin);
     left_point.y = y + sin(left_direction) * (0.5 * width + margin) ;
-    left_point.z = 0;
+    left_point.z = z;
 
     right_point.x = x - cos(left_direction) * (0.5 * width + margin);
     right_point.y = y - sin(left_direction) * (0.5 * width + margin);
-    right_point.z = 0;
+    right_point.z = z;
 
     return { left_point, right_point };
   }
