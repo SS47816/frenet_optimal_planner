@@ -421,10 +421,10 @@ public:
 
     buggy_prediction_markers = buggyPredictionsToMarkers(buggy_rects, marker_id, "buggy_predicted_positions", GREEN);
 
-    front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, current_state,
+    front_axle_traj_marker = visualizePredictedTrajectory(front_axle_traj, vehicle_width, safety_margin, current_state, true,
                                                           marker_id, "predicted_trajectory/front_axle", GREEN, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
-    rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, current_state,
+    rear_axle_traj_marker = visualizePredictedTrajectory(rear_axle_traj, vehicle_width, safety_margin, current_state, true,
                                                          marker_id, "predicted_trajectory/rear_axle", BLUE, PREDICTED_TRAJECTORY_MARKER_SCALE);
 
     dynamic_bumper_straight_marker =
@@ -580,9 +580,9 @@ public:
     return label_markers;
   }
 
-  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, double vehicle_width,
-                                                                 double safety_margin, VehicleState current_state,
-                                                                 int& marker_id, std::string ns, COLOR color, double scale)
+  static visualization_msgs::Marker visualizePredictedTrajectory(const Path& traj, double vehicle_width, double safety_margin, 
+                                                                 const VehicleState current_state, const bool use_current_state,
+                                                                 int& marker_id, const std::string ns, const COLOR color, const double scale)
   {
     visualization_msgs::Marker predicted_trajectory_marker = initializeMarker(marker_id, ns, getColor(color), 
                                                                               scale, visualization_msgs::Marker::LINE_STRIP);
@@ -591,10 +591,13 @@ public:
     std::vector<geometry_msgs::Point32> right_bound;
     std::vector<geometry_msgs::Point32> left_right_points;
 
-    left_right_points = getBothSidesPoints(current_state.x, current_state.y, current_state.yaw, vehicle_width, safety_margin);
-    left_bound.push_back(left_right_points.at(0));
-    right_bound.push_back(left_right_points.at(1));
-
+    if (use_current_state)
+    {
+      left_right_points = getBothSidesPoints(current_state.x, current_state.y, current_state.yaw, vehicle_width, safety_margin);
+      left_bound.push_back(left_right_points.at(0));
+      right_bound.push_back(left_right_points.at(1));
+    }
+    
     for (int i = 0; i < traj.x.size(); i++)
     {
       left_right_points = getBothSidesPoints(traj.x[i], traj.y[i], traj.yaw[i], vehicle_width, safety_margin);

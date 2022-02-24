@@ -397,7 +397,7 @@ void FrenetOptimalPlannerNode::publishSampleSpace(const Path& ref_path)
 {
   int marker_id = 0;
   const auto sample_space_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
-    ref_path, SETTINGS.vehicle_width, 1.5, current_state_, marker_id, "space", Visualization::COLOR::WHITE, 0.1);
+    ref_path, SETTINGS.vehicle_width, 1.5, current_state_, false, marker_id, "space", Visualization::COLOR::YELLOW, 0.1);
   sample_space_pub.publish(sample_space_marker);
 }
 
@@ -416,7 +416,7 @@ void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const Fr
   }
 
   const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
-    vis_traj, SETTINGS.vehicle_width, 0.0, current_state_, marker_id, "final", Visualization::COLOR::GREEN, 0.15);
+    vis_traj, SETTINGS.vehicle_width, 0.0, current_state_, true, marker_id, "final", Visualization::COLOR::GREEN, 0.15);
   final_traj_pub.publish(output_traj_marker);
 }
 

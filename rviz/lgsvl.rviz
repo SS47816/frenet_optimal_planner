@@ -10,6 +10,7 @@ Panels:
         - /Perception1
         - /Perception1/AutowareObjectMarkers1/Namespaces1
         - /Maps1
+        - /Maps1/Lanelet2 Map1
         - /Maps1/Lanelet2 Map1/Namespaces1
         - /Planning1
         - /Vehicle Status1
@@ -343,7 +344,9 @@ Visualization Manager:
           Marker Topic: /vector_map
           Name: VectorMap
           Namespaces:
-            {}
+            signal: true
+            stop_line: true
+            white_line: true
           Queue Size: 0
           Value: true
         - Class: rviz/MarkerArray
@@ -359,7 +362,10 @@ Visualization Manager:
           Marker Topic: /lanelet2_map_viz
           Name: Lanelet2 Map
           Namespaces:
-            {}
+            center_lane_line: true
+            left_lane_bound: true
+            right_lane_bound: true
+            road_lanelets: false
           Queue Size: 0
           Value: true
       Enabled: true
@@ -579,18 +585,18 @@ Visualization Manager:
           text size: 15
           top: 50
           width: 200
-      Enabled: false
+      Enabled: true
       Name: Vehicle Status
     - Class: rviz/Group
       Displays:
         - Class: rviz/MarkerArray
-          Enabled: false
+          Enabled: true
           Marker Topic: /local_planner/candidate_paths
           Name: Candidate Trajectories
           Namespaces:
             {}
           Queue Size: 100
-          Value: false
+          Value: true
         - Alpha: 1
           Buffer Length: 1
           Class: rviz/Path
@@ -713,26 +719,21 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/Orbit
-      Distance: 42.27262496948242
+      Angle: -1.5449990034103394
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.44979748129844666
+      Scale: 9.522462844848633
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 3.125385046005249
+      Value: TopDownOrtho (rviz)
+      X: 0
+      Y: 0
     Saved: ~
 Window Geometry:
   Displays:
