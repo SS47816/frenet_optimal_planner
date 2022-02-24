@@ -85,11 +85,11 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
   SETTINGS.k_lon = config.k_lon;
   // SETTINGS.k_obstacle = config.k_obstacle;
   // Safety constraints
+  SETTINGS.vehicle_length = config.vehicle_length;
+  SETTINGS.vehicle_width = config.vehicle_width;
   SETTINGS.safety_margin_lon = config.safety_margin_lon;
   SETTINGS.safety_margin_lat = config.safety_margin_lat;
   SETTINGS.safety_margin_soft = config.safety_margin_soft;
-  SETTINGS.vehicle_width = Vehicle::bbox_size().y();
-  SETTINGS.vehicle_length = Vehicle::bbox_size().x();
   // PID and Stanley gains
   PID_Kp = config.PID_Kp;
   PID_Ki = config.PID_Ki;
