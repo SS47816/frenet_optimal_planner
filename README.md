@@ -2,25 +2,38 @@
 
 Implementation of Frenet Optimal Planning Algorithm in ROS
 
+[![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils)
+![Code Grade](https://api.codiga.io/project/30669/status/svg)
+![Code Quality Score](https://api.codiga.io/project/30669/score/svg)
+![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/lgsvl_utils?color=FFE333)
+![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/lgsvl_utils?color=FFE333)
+
+![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-informational?style=flat&logo=ubuntu&logoColor=white&color=2bbc8a)
+![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
+![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
+
 ![image](./pics/demo_2d.png "Demo 2D")
 ![image](./pics/demo_3d.png "Demo 3D")
 
 ## Features
 
 ## Dependencies
+Our package is only based on standard ROS pkgs, with no other external dependencies:
 * C++11 above
 * CMake: 3.0.2 above
+* Eigen (included)
 * ROS Packages:
   * roscpp
   * rospy
+  * tf
+  * tf2_ros
   * std_msgs
   * nav_msgs
   * geometry_msgs
   * autoware_msgs
   * message_generation
+  * visualization_msgs
   * dynamic_reconfigure
-  * tf
-  * tf2_ros
 
 ## Installation
 Clone the repo and install dependencies:
@@ -42,7 +55,7 @@ source devel/setup.bash
 
 Launch the Planner node by running:
 ```bash
-# clone the repo
+# Launch nodes
 roslaunch frenet_optimal_planner frenet_optimal_planner.launch
 ```
 
@@ -55,4 +68,6 @@ We are following:
 and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
 
 ## License
-TBD
+Our `fiss_planner` ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/frenet_optimal_planner/blob/main/LICENSE)
+
+The included Eigen Library follows its own [Mozilla Public License v. 2.0](http://mozilla.org/MPL/2.0/)
