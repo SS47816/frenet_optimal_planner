@@ -2,30 +2,25 @@
 
 Implementation of Frenet Optimal Planning Algorithm in ROS
 
-![image](./pics/micron_0.png "Demo 1")
-![image](./pics/micron_1.png "Demo 2")
-![image](./pics/e8_0.png "Demo 3")
+![image](./pics/demo_2d.png "Demo 2D")
+![image](./pics/demo_3d.png "Demo 3D")
 
 ## Features
-
-## TODOs
-* **lane info**: change lane info input to standard format
-* **obstacle frame**: remove frame transform for obstacles 
 
 ## Dependencies
 * C++11 above
 * CMake: 3.0.2 above
 * ROS Packages:
-    * roscpp
-    * rospy
-    * std_msgs
-    * nav_msgs
-    * geometry_msgs
-    * autoware_msgs
-    * message_generation
-    * dynamic_reconfigure
-    * tf
-    * tf2_ros
+  * roscpp
+  * rospy
+  * std_msgs
+  * nav_msgs
+  * geometry_msgs
+  * autoware_msgs
+  * message_generation
+  * dynamic_reconfigure
+  * tf
+  * tf2_ros
 
 ## Installation
 Clone the repo and install dependencies:
