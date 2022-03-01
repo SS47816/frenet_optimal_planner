@@ -68,6 +68,6 @@ We are following:
 and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
 
 ## License
-Our `fiss_planner` ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/frenet_optimal_planner/blob/main/LICENSE)
+Our [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner) ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/frenet_optimal_planner/blob/main/LICENSE)
 
 The included Eigen Library follows its own [Mozilla Public License v. 2.0](http://mozilla.org/MPL/2.0/)
