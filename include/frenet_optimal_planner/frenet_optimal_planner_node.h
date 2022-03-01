@@ -1,27 +1,11 @@
-
-/* frenet_optimal_planner_node.h
-
-  Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore
-
-  Local Planner ROS Node
-  Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
-*/
-
-/**
- * |              |              |
- * |LB +  0  - RB |              |
- * |<--*     *----|------------->|
- * |   +-----+    |              |
- * |   |     |    |              |
- * |   |  *  |    |              |
- * |   |     |    |              |
- * |   +-----+    |              |
- * |   Buggy W    |              |
- *     <----->    |              |
- * |              |              |
- * | L Lane Width | R Lane Width |
- * |<------------>|<------------>|
- * |              |              |
+/** frenet_optimal_planner_node.h
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Local Planner ROS Node
+ * Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
  */
 
 #include <cmath>
@@ -45,7 +29,7 @@
 #include <frenet_optimal_planner/frenet_optimal_planner_Config.h>
 
 #include "frenet_optimal_planner/pid.hpp"
-#include "frenet_optimal_planner/visualization.cpp"
+#include "frenet_optimal_planner/visualization.hpp"
 #include "frenet_optimal_planner/frenet_optimal_trajectory_planner.h"
 
 namespace fop

@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   geometry_msgs
   autoware_msgs
-  message_generation
+  visualization_msgs
   dynamic_reconfigure
   tf
   tf2_ros
@@ -55,12 +55,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  LaneInfo.msg
-  SpecialWaypointArray.msg
-  Waypoint.msg
-)
+# add_message_files(
+#   FILES
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -77,12 +74,12 @@ add_message_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-  nav_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   geometry_msgs
+#   nav_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -115,7 +112,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES frenet_optimal_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs
   DEPENDS system_lib
 )
 
@@ -159,9 +156,7 @@ add_library(${PROJECT_NAME}
   include/${PROJECT_NAME}/vehicle.cc
   include/${PROJECT_NAME}/sat_collision_checker.h
   include/${PROJECT_NAME}/sat_collision_checker.cc
-  include/${PROJECT_NAME}/behaviour.h
-  include/${PROJECT_NAME}/behaviour.cc
-  include/${PROJECT_NAME}/visualization.cpp
+  include/${PROJECT_NAME}/visualization.hpp
   include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.h
   include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.cc
 )
@@ -169,7 +164,7 @@ add_library(${PROJECT_NAME}
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context

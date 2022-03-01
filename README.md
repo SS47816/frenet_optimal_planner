@@ -1,6 +1,7 @@
 # frenet_optimal_planner
 
-Implementation of Frenet Optimal Planning Algorithm in ROS
+Implementation of the Frenet Optimal Planning Algorithm in ROS
+The original paper "Optimal trajectory generation for dynamic street scenarios in a Frenét Frame" can be found [here](https://ieeexplore.ieee.org/document/5509799)
 
 [![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils)
 ![Code Grade](https://api.codiga.io/project/30669/status/svg)

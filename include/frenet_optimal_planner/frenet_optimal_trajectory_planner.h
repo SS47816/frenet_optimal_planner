@@ -1,10 +1,12 @@
-/* frenet_optimal_trajectory_planner.h
-
-  Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
-
-  Implementation of Optimal trajectory planning in Frenet Coordinate Algorithm
-  Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
-*/
+/** frenet_optimal_trajectory_planner.h
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Implementation of Optimal trajectory planning in Frenet Coordinate Algorithm
+ * Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
+ */
 
 #ifndef FRENET_OPTIMAL_TRAJECTORY_PLANNER_H_
 #define FRENET_OPTIMAL_TRAJECTORY_PLANNER_H_

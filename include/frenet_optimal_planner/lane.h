@@ -1,8 +1,10 @@
 /** lane.h
- *
- * Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
- *
- * Classes and functions related to lanes
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Implementation of Waypoints and Lanes
  */
 
 #ifndef LANE_H_
@@ -12,7 +14,6 @@
 
 #include <tf/tf.h>
 #include <nav_msgs/Path.h>
-#include <frenet_optimal_planner/LaneInfo.h>
 
 #include "math_utils.h"
 #include "vehicle_state.h"
@@ -69,7 +70,6 @@ class Lane
  public:
   // constructors
   Lane(){};
-  // Lane(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   // Destructor
   virtual ~Lane() {};
