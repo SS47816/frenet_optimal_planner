@@ -1,8 +1,5 @@
 # frenet_optimal_planner
 
-Implementation of the Frenet Optimal Planning Algorithm in ROS
-The original paper "Optimal trajectory generation for dynamic street scenarios in a Frenét Frame" can be found [here](https://ieeexplore.ieee.org/document/5509799)
-
 [![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils)
 ![Code Grade](https://api.codiga.io/project/30669/status/svg)
 ![Code Quality Score](https://api.codiga.io/project/30669/score/svg)
@@ -13,10 +10,18 @@ The original paper "Optimal trajectory generation for dynamic street scenarios i
 ![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
 
+Implementation of the Frenet Optimal Planning Algorithm (with modifications) in ROS.
+
+The original paper "Optimal trajectory generation for dynamic street scenarios in a Frenét Frame" can be found [here](https://ieeexplore.ieee.org/document/5509799)
+
+## Demo
 ![image](./pics/demo_2d.png "Demo 2D")
 ![image](./pics/demo_3d.png "Demo 3D")
 
-## Features
+## Features & Modifications
+1. We improved the framework to adopt the pipeline used in `Apollo Lattice Planner` to speed up the planning.
+2. We add an asynchronous collision checking module as an option (can be switched on by setting `use_async = True`), which can significantly improve the planning frequency.
+3. We add a trajectory concatenation strategy to keep the trajectories consistent between adjacent planning cycles.
 
 ## Dependencies
 Our package is only based on standard ROS pkgs, with no other external dependencies:
