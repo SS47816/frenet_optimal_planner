@@ -16,7 +16,6 @@ The original paper "Optimal trajectory generation for dynamic street scenarios i
 
 ## Demo
 ![image](./pics/demo_2d.png "Demo 2D")
-![image](./pics/demo_3d.png "Demo 3D")
 
 ## Features & Modifications
 1. We improved the framework to adopt the pipeline used in `Apollo Lattice Planner` to speed up the planning.
