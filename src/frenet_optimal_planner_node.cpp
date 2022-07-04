@@ -20,7 +20,7 @@ FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanne
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
 const double WP_MIN_SEP = 0.1;                                    // Minimum allowable waypoint separation
 const double HEADING_DIFF_THRESH = M_PI/2;                        // Maximum allowed heading diff between vehicle and path
-const double MAX_DIST_FROM_PATH = 10.0;                           // Maximum allowed distance between vehicle and path
+const double MAX_DIST_FROM_PATH = 10.0;                            // Maximum allowed distance between vehicle and path
 
 /* List of dynamic parameters */
 // Hyperparameters for output path
@@ -117,7 +117,9 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   std::string ref_path_topic;
   std::string curr_traj_topic;
   std::string next_traj_topic;
+  std::string candidate_trajs_topic;
   std::string vehicle_cmd_topic;
+  std::string twist_cmd_topic;
 
   ros::NodeHandle private_nh("~");
   f = boost::bind(&dynamicParamCallback, _1, _2);
@@ -130,7 +132,9 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("curr_traj_topic", curr_traj_topic));
   ROS_ASSERT(private_nh.getParam("next_traj_topic", next_traj_topic));
   ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
+  ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
+  ROS_ASSERT(private_nh.getParam("twist_cmd_topic", twist_cmd_topic));
 
   // Instantiate FrenetOptimalTrajectoryPlanner
   frenet_planner_ = FrenetOptimalTrajectoryPlanner(SETTINGS);
@@ -143,9 +147,10 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
   next_traj_pub = nh.advertise<nav_msgs::Path>(next_traj_topic, 1);
-  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("local_planner/candidate_paths", 1);
+  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
-  obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
+  twist_cmd_pub = nh.advertise<geometry_msgs::Twist>(twist_cmd_topic, 1);
+  // obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
 
   // Initializing states
   regenerate_flag_ = false;
@@ -196,7 +201,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   
   auto obstacles = boost::make_shared<autoware_msgs::DetectedObjectArray>();
   transformObjects(*obstacles, *input_obstacles);
-  obstacles_pub.publish(*obstacles);
+  // obstacles_pub.publish(*obstacles);
 
   // Check if all required data are in position
   if (obstacles->objects.empty())
@@ -346,7 +351,8 @@ void FrenetOptimalPlannerNode::publishCurrTraj(const fop::Path& path)
     pose.header = curr_trajectory_msg.header;
     pose.pose.position.x = path.x[i];
     pose.pose.position.y = path.y[i];
-    pose.pose.position.z = map_height_ + 2.0*path.v[i]/fop::Vehicle::max_speed();
+    pose.pose.position.z = path.v[i];
+    // pose.pose.position.z = map_height_ + 2.0*path.v[i]/fop::Vehicle::max_speed();
     pose.pose.orientation = tf::createQuaternionMsgFromYaw(path.yaw[i]);
     curr_trajectory_msg.poses.emplace_back(pose);
   }
@@ -393,7 +399,7 @@ void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
   publishRefSpline(fop::Path());
   publishCurrTraj(fop::Path());
   publishNextTraj(fop::FrenetPath());
-  publishVehicleCmd(-1.0, 0.0);
+  publishVehicleCmd(0.0, -1.0, 0.0);
 }
 
 // Update the vehicle front axle state (used in odomcallback)
@@ -728,12 +734,12 @@ void FrenetOptimalPlannerNode::concatPath(const fop::FrenetPath& next_traj, cons
     if (calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
     {
       // Publish steering angle
-      publishVehicleCmd(acceleration_, steering_angle_);
+      publishVehicleCmd(speed_, acceleration_, steering_angle_);
     }
     else
     {
       ROS_ERROR("Local Planner: No output steering angle");
-      publishVehicleCmd(-1.0, 0.0); // Publish empty control output
+      publishVehicleCmd(0.0, -1.0, 0.0); // Publish empty control output
     }
 
     const int next_wp_id = fop::nextWaypoint(current_state_, curr_trajectory_);
@@ -782,7 +788,7 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
     const double a = fop::distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id], curr_trajectory_.y[wp_id]);
     const double b = fop::distance(frontaxle_state.x, frontaxle_state.y, curr_trajectory_.x[wp_id+1], curr_trajectory_.y[wp_id+1]);
     // if the vehicle is too far from the waypoint, return error value
-    if (a >= MAX_DIST_FROM_PATH || b >= MAX_DIST_FROM_PATH)
+    if (a >= 1.0 || b >= 1.0)
     {
       ROS_WARN("Local Planner: Vehicle is too far from the path, Regenerate");
       regenerate_flag_ = true;
@@ -805,7 +811,8 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
     steering_angle_ = fop::limitWithinRange(steering_angle_, -fop::Vehicle::max_steering_angle(), fop::Vehicle::max_steering_angle());
 
     // Calculate accelerator output
-    acceleration_ = pid_.calculate(curr_trajectory_.v[wp_id], current_state_.v);
+    speed_ = curr_trajectory_.v[wp_id];
+    acceleration_ = pid_.calculate(speed_, current_state_.v);
 
     ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", curr_trajectory_.v[wp_id], current_state_.v, acceleration_);
     ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, fop::rad2deg(delta_yaw), fop::rad2deg(steering_angle_));
@@ -814,13 +821,18 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
 }
 
 // Publish the resulted steering angle (Stanley)
-void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const double angle)
+void FrenetOptimalPlannerNode::publishVehicleCmd(const double speed, const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
   vehicle_cmd.twist_cmd.twist.linear.x = accel/fop::Vehicle::max_acceleration();  // [pct]
   vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
   vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
   vehicle_cmd_pub.publish(vehicle_cmd);
+
+  geometry_msgs::Twist twist_cmd;
+  twist_cmd.linear.x = speed;
+  twist_cmd.angular.z = steering_angle_;
+  twist_cmd_pub.publish(twist_cmd);
 }
 
 } // namespace fop

@@ -56,6 +56,7 @@ class FrenetOptimalPlannerNode
   double map_height_;
 
   // Control outputs
+  double speed_;
   double acceleration_;
   double steering_angle_;
 
@@ -86,7 +87,8 @@ class FrenetOptimalPlannerNode
   ros::Publisher ref_path_pub;
   ros::Publisher vehicle_cmd_pub;
   ros::Publisher candidate_paths_pub;
-  ros::Publisher obstacles_pub;
+  // ros::Publisher obstacles_pub;
+  ros::Publisher twist_cmd_pub;
 
   // ROS
   ros::NodeHandle nh;
@@ -107,7 +109,7 @@ class FrenetOptimalPlannerNode
   void publishRefSpline(const fop::Path& path);
   void publishCurrTraj(const fop::Path& path);
   void publishNextTraj(const fop::FrenetPath& next_traj);
-  void publishVehicleCmd(const double accel, const double angle);
+  void publishVehicleCmd(const double speed, const double accel, const double angle);
   void publishCandidateTrajs(const std::vector<fop::FrenetPath>& candidate_trajs);
 
   // Planner Helper Functions
