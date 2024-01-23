@@ -26,7 +26,7 @@
 #include <autoware_msgs/DetectedObjectArray.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <frenet_optimal_planner/frenet_optimal_planner_Config.h>
+#include <frenet_optimal_planner/frenet_optimal_plannerConfig.h>
 
 #include "frenet_optimal_planner/pid.hpp"
 #include "frenet_optimal_planner/visualization.hpp"
@@ -92,8 +92,8 @@ class FrenetOptimalPlannerNode
   ros::NodeHandle nh;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
-  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
-  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config>::CallbackType f;
+  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_plannerConfig> server;
+  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_plannerConfig>::CallbackType f;
 
   // ###################################### Private Functions ######################################
 

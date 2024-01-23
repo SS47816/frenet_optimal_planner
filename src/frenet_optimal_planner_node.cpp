@@ -46,7 +46,7 @@ bool USE_ASYNC;
 bool SETTINGS_UPDATED = false;
 
 // Dynamic parameter server callback function
-void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
+void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_plannerConfig& config, uint32_t level)
 {
 // General Settings
   CHECK_COLLISION = config.check_collision;
