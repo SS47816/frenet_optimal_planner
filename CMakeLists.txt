@@ -11,14 +11,15 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  tf
+  tf2_ros
   std_msgs
   nav_msgs
   geometry_msgs
   autoware_msgs
   visualization_msgs
+  tf2_geometry_msgs
   dynamic_reconfigure
-  tf
-  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -112,7 +113,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES frenet_optimal_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs nav_msgs visualization_msgs autoware_msgs tf tf2_ros tf2_geometry_msgs dynamic_reconfigure
   DEPENDS system_lib
 )
 
